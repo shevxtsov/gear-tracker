@@ -130,7 +130,7 @@ const handleSubmit = async (): Promise<void> => {
 
         isSubmitting.value = true
 
-        gearStore.takeItem(form.value.gearId!, {
+        await gearStore.takeItem(form.value.gearId!, {
             takenBy: form.value.takenBy!,
             takenTo: form.value.takenTo!,
             takenAt: form.value.takenAt!

@@ -128,7 +128,7 @@ const handleSubmit = async (): Promise<void> => {
 
         isSubmitting.value = true
 
-        gearStore.addItem({
+        await gearStore.addItem({
             name: form.value.name,
             category: form.value.category!,
             location: form.value.location!

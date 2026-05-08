@@ -130,7 +130,7 @@ const handleSubmit = async (): Promise<void> => {
 
         isSubmitting.value = true
 
-        gearStore.updateItem(props.item.id, {
+        await gearStore.updateItem(props.item.id, {
             name: form.value.name,
             category: form.value.category,
             location: form.value.location

@@ -10,6 +10,10 @@
                     <span class="dashboard-gear-card__taken-row">Куда: {{ item.takenTo ?? '—' }}</span>
                     <span class="dashboard-gear-card__taken-row">Когда: {{ formattedDate }}</span>
                 </template>
+
+                <span v-if="item.available && lastReturnedTo" class="dashboard-gear-card__returned-row">
+                    Последний возврат: {{ lastReturnedTo }}
+                </span>
             </div>
 
             <div class="dashboard-gear-card__right">
@@ -46,6 +50,11 @@ import type { GearItem } from '@/modules/gear/types/gear.types'
 const props = defineProps<{ item: GearItem }>()
 
 const router = useRouter()
+
+const lastReturnedTo = computed<string | null>(() => {
+    const last = [...props.item.history].reverse().find((r) => r.returnedAt !== null)
+    return last?.returnedTo ?? null
+})
 
 const formattedDate = computed<string>(() => {
     if (!props.item.takenAt) return '—'
@@ -91,6 +100,11 @@ const formattedDate = computed<string>(() => {
     &__taken-row {
         font-size: 12px;
         color: #e88080;
+    }
+
+    &__returned-row {
+        font-size: 12px;
+        opacity: 0.5;
     }
 
     &__right {

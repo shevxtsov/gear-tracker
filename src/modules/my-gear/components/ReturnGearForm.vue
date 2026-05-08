@@ -51,7 +51,7 @@ const handleSubmit = async (): Promise<void> => {
     try {
         await formRef.value?.validate()
 
-        gearStore.returnItem(props.gearId, form.value.returnedTo!)
+        await gearStore.returnItem(props.gearId, form.value.returnedTo!)
 
         emit('submitted')
     } catch {

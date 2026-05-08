@@ -80,15 +80,21 @@
         </NDrawerContent>
     </NDrawer>
 
-    <NDrawer v-model:show="takeGearDrawerOpen" placement="bottom" :height="420">
+    <NDrawer v-model:show="takeGearDrawerOpen" placement="bottom" :height="520">
         <NDrawerContent title="Взять оборудование" :native-scrollbar="false">
             <TakeGearForm @submitted="takeGearDrawerOpen = false" />
         </NDrawerContent>
     </NDrawer>
 
     <NDrawer v-model:show="loginDrawerOpen" placement="bottom" :height="320">
-        <NDrawerContent title="Управление" :native-scrollbar="false">
-            <LoginForm />
+        <NDrawerContent title="Вход" :native-scrollbar="false">
+            <LoginForm @register="openRegisterDrawer" />
+        </NDrawerContent>
+    </NDrawer>
+
+    <NDrawer v-model:show="registerDrawerOpen" placement="bottom" :height="560">
+        <NDrawerContent title="Регистрация" :native-scrollbar="false">
+            <RegisterForm @back="openLoginDrawer" />
         </NDrawerContent>
     </NDrawer>
 </template>
@@ -99,15 +105,18 @@ import { useRouter, useRoute } from 'vue-router'
 import { NButton, NDrawer, NDrawerContent, NIcon } from 'naive-ui'
 import { MenuOutline, LogOutOutline, LogInOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
+import { useAuthDrawer } from '@/modules/auth/composables/use-auth-drawer'
 import LoginForm from '@/modules/auth/components/LoginForm.vue'
+import RegisterForm from '@/modules/auth/components/RegisterForm.vue'
 import TakeGearForm from '@/modules/gear/components/TakeGearForm.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { loginDrawerOpen, closeLogin } = useAuthDrawer()
 
 const menuOpen = ref<boolean>(false)
-const loginDrawerOpen = ref<boolean>(false)
+const registerDrawerOpen = ref<boolean>(false)
 const takeGearDrawerOpen = ref<boolean>(false)
 
 const isActive = (name: string): boolean => route.name === name
@@ -119,7 +128,13 @@ const navigate = (name: string): void => {
 
 const openLoginDrawer = (): void => {
     menuOpen.value = false
+    registerDrawerOpen.value = false
     loginDrawerOpen.value = true
+}
+
+const openRegisterDrawer = (): void => {
+    loginDrawerOpen.value = false
+    registerDrawerOpen.value = true
 }
 
 const openTakeGearDrawer = (): void => {
@@ -137,7 +152,7 @@ watch(
     () => authStore.isAuthenticated,
     (isAuthenticated: boolean) => {
         if (isAuthenticated) {
-            loginDrawerOpen.value = false
+            closeLogin()
         }
     }
 )
