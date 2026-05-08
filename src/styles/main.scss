@@ -1,0 +1,9 @@
+@use 'variables' as *;
+@use 'reset';
+
+// iOS Safari зумит страницу если font-size инпута < 16px
+.n-input__input-el,
+.n-input__textarea-el,
+.n-base-selection-input {
+    font-size: 16px !important;
+}
