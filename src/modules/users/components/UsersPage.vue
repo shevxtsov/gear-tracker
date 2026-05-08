@@ -61,6 +61,7 @@
                                     {{ UsersService.getRoleLabel(user.role) }}
                                 </NTag>
                             </div>
+                            <span class="user-card__phone">{{ user.email }}</span>
                             <span class="user-card__phone">{{ user.phone }}</span>
                         </div>
 
@@ -95,13 +96,13 @@
         </template>
     </div>
 
-    <NDrawer v-model:show="drawerOpen" placement="bottom" :height="320">
+    <NDrawer v-model:show="drawerOpen" placement="bottom" :height="460">
         <NDrawerContent title="Новый пользователь" :native-scrollbar="false">
             <AddUserForm @submitted="drawerOpen = false" />
         </NDrawerContent>
     </NDrawer>
 
-    <NDrawer v-model:show="editDrawerOpen" placement="bottom" :height="320">
+    <NDrawer v-model:show="editDrawerOpen" placement="bottom" :height="460">
         <NDrawerContent title="Редактировать" :native-scrollbar="false">
             <EditUserForm
                 v-if="editingUser"

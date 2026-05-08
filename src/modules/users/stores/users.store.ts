@@ -26,7 +26,10 @@ export const useUsersStore = defineStore('users', () => {
         users.value.push(user)
     }
 
-    const updateUser = async (id: string, patch: Omit<User, 'id'>): Promise<void> => {
+    const updateUser = async (
+        id: string,
+        patch: Omit<User, 'id'>
+    ): Promise<void> => {
         await UsersApi.update(id, patch)
         const index = users.value.findIndex((u) => u.id === id)
         if (index !== -1) {
@@ -39,5 +42,13 @@ export const useUsersStore = defineStore('users', () => {
         users.value = users.value.filter((u) => u.id !== id)
     }
 
-    return { users, isLoading, error, fetchAll, addUser, updateUser, deleteUser }
+    return {
+        users,
+        isLoading,
+        error,
+        fetchAll,
+        addUser,
+        updateUser,
+        deleteUser
+    }
 })

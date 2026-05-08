@@ -16,6 +16,15 @@
             />
         </NFormItem>
 
+        <NFormItem label="Почта" path="email">
+            <NInput
+                v-model:value="form.email"
+                placeholder=""
+                :input-props="{ type: 'email', autocomplete: 'off' }"
+                :disabled="isSubmitting"
+            />
+        </NFormItem>
+
         <NFormItem label="Номер телефона" path="phone">
             <NInput
                 :value="isPhoneFocused ? form.phone : maskedPhone"
@@ -63,7 +72,7 @@ const formRef = ref<FormInst | null>(null)
 const isSubmitting = ref<boolean>(false)
 const isPhoneFocused = ref<boolean>(false)
 
-const form = ref({ name: '', phone: '', role: 'user' as UserRole })
+const form = ref({ name: '', email: '', phone: '', role: 'user' as UserRole })
 
 const maskedPhone = computed<string>(() =>
     form.value.phone ? Utils.maskPhone(form.value.phone) : ''
@@ -71,6 +80,10 @@ const maskedPhone = computed<string>(() =>
 
 const rules: FormRules = {
     name: [{ required: true, message: 'Введите имя', trigger: 'blur' }],
+    email: [
+        { required: true, message: 'Введите почту', trigger: 'blur' },
+        { type: 'email', message: 'Некорректный адрес почты', trigger: 'blur' }
+    ],
     phone: [
         { required: true, message: 'Введите номер телефона', trigger: 'blur' },
         { min: 4, message: 'Минимум 4 символа', trigger: 'blur' }
@@ -86,6 +99,7 @@ const handleSubmit = async (): Promise<void> => {
 
         await usersStore.addUser({
             name: form.value.name,
+            email: form.value.email,
             phone: Utils.maskPhone(form.value.phone),
             role: form.value.role
         })
