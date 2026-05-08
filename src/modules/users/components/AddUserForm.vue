@@ -44,6 +44,10 @@
             />
         </NFormItem>
 
+        <NText v-if="authError" type="error" class="add-user-form__error">
+            {{ authError }}
+        </NText>
+
         <NButton
             type="primary"
             attr-type="submit"
@@ -57,9 +61,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { NForm, NFormItem, NInput, NButton, NSelect } from 'naive-ui'
+import { NForm, NFormItem, NInput, NButton, NSelect, NText } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
 import { useUsersStore } from '@/modules/users/stores/users.store'
+import { AuthApi } from '@/modules/auth/api/auth.api'
 import { ROLE_OPTIONS } from '@/modules/users/services/users.service'
 import { Utils } from '@/shared/services/utils'
 import type { UserRole } from '@/modules/users/types/users.types'
@@ -68,9 +73,12 @@ const emit = defineEmits<{ submitted: [] }>()
 
 const usersStore = useUsersStore()
 
+const DEFAULT_PASSWORD = 'Aa123456'
+
 const formRef = ref<FormInst | null>(null)
 const isSubmitting = ref<boolean>(false)
 const isPhoneFocused = ref<boolean>(false)
+const authError = ref<string | null>(null)
 
 const form = ref({ name: '', email: '', phone: '', role: 'user' as UserRole })
 
@@ -96,6 +104,9 @@ const handleSubmit = async (): Promise<void> => {
         await formRef.value?.validate()
 
         isSubmitting.value = true
+        authError.value = null
+
+        await AuthApi.createUserAccount(form.value.email, DEFAULT_PASSWORD)
 
         await usersStore.addUser({
             name: form.value.name,
@@ -105,8 +116,8 @@ const handleSubmit = async (): Promise<void> => {
         })
 
         emit('submitted')
-    } catch {
-        // ошибки валидации обрабатывает NForm
+    } catch (e) {
+        if (e instanceof Error) authError.value = e.message
     } finally {
         isSubmitting.value = false
     }
@@ -125,5 +136,10 @@ const handleSubmit = async (): Promise<void> => {
 .add-user-form {
     display: flex;
     flex-direction: column;
+
+    &__error {
+        display: block;
+        margin-bottom: 16px;
+    }
 }
 </style>

@@ -1,12 +1,24 @@
 <template>
     <header class="app-header">
-        <span class="app-header__logo">Gear Tracker</span>
+        <span class="app-header__logo" @click="router.push({ name: 'dashboard' })">Gear Tracker</span>
 
-        <NButton quaternary circle @click="menuOpen = true">
-            <template #icon>
-                <NIcon size="22"><MenuOutline /></NIcon>
-            </template>
-        </NButton>
+        <div class="app-header__actions">
+            <NAvatar
+                v-if="authStore.isAuthenticated"
+                round
+                size="small"
+                class="app-header__avatar"
+                @click="router.push({ name: 'profile' })"
+            >
+                {{ profileLetter }}
+            </NAvatar>
+
+            <NButton quaternary circle @click="menuOpen = true">
+                <template #icon>
+                    <NIcon size="22"><MenuOutline /></NIcon>
+                </template>
+            </NButton>
+        </div>
     </header>
 
     <NDrawer v-model:show="menuOpen" placement="right" :width="280">
@@ -21,7 +33,7 @@
                         Обзор
                     </button>
                     <button
-                        v-if="authStore.isAuthenticated"
+                        v-if="hasAdminAccess"
                         class="nav-menu__item"
                         :class="{ 'nav-menu__item--active': isActive('gear') }"
                         @click="navigate('gear')"
@@ -29,7 +41,7 @@
                         Оборудование
                     </button>
                     <button
-                        v-if="authStore.isAuthenticated"
+                        v-if="hasAdminAccess"
                         class="nav-menu__item"
                         :class="{ 'nav-menu__item--active': isActive('users') }"
                         @click="navigate('users')"
@@ -94,18 +106,20 @@
 
     <NDrawer v-model:show="registerDrawerOpen" placement="bottom" :height="560">
         <NDrawerContent title="Регистрация" :native-scrollbar="false">
-            <RegisterForm @back="openLoginDrawer" />
+            <RegisterForm @back="openLoginDrawer" @submitted="registerDrawerOpen = false" />
         </NDrawerContent>
     </NDrawer>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NButton, NDrawer, NDrawerContent, NIcon } from 'naive-ui'
+import { NButton, NDrawer, NDrawerContent, NIcon, NAvatar } from 'naive-ui'
 import { MenuOutline, LogOutOutline, LogInOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useAuthDrawer } from '@/modules/auth/composables/use-auth-drawer'
+import { useGearStore } from '@/modules/gear/stores/gear.store'
+import { useUsersStore } from '@/modules/users/stores/users.store'
 import LoginForm from '@/modules/auth/components/LoginForm.vue'
 import RegisterForm from '@/modules/auth/components/RegisterForm.vue'
 import TakeGearForm from '@/modules/gear/components/TakeGearForm.vue'
@@ -114,6 +128,21 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const { loginDrawerOpen, closeLogin } = useAuthDrawer()
+const gearStore = useGearStore()
+const usersStore = useUsersStore()
+
+const hasAdminAccess = computed(() => {
+    if (!authStore.isAuthenticated) return false
+    const currentUser = usersStore.users.find((u) => u.email === authStore.currentUserEmail)
+    // не найден в коллекции → суперадмин
+    if (!currentUser) return true
+    return currentUser.role === 'admin' || currentUser.role === 'moderator'
+})
+
+const profileLetter = computed(() => {
+    const name = usersStore.users.find((u) => u.email === authStore.currentUserEmail)?.name
+    return (name ?? authStore.currentUserEmail ?? '?')[0].toUpperCase()
+})
 
 const menuOpen = ref<boolean>(false)
 const registerDrawerOpen = ref<boolean>(false)
@@ -144,6 +173,7 @@ const openTakeGearDrawer = (): void => {
 
 const handleLogout = (): void => {
     authStore.logout()
+    gearStore.reset()
     menuOpen.value = false
     router.push({ name: 'dashboard' })
 }
@@ -172,6 +202,19 @@ watch(
         font-size: 16px;
         font-weight: 600;
         color: #fff;
+        cursor: pointer;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__avatar {
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
     }
 }
 
