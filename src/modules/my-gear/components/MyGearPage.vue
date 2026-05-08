@@ -2,9 +2,9 @@
     <div class="my-gear-page">
         <h1 class="my-gear-page__title">Моё оборудование</h1>
 
-        <template v-if="myGearStore.currentUserName">
-            <p class="my-gear-page__user">{{ myGearStore.currentUserName }}</p>
+        <NSpin v-if="isLoading" class="my-gear-page__spinner" />
 
+        <template v-else-if="currentUser">
             <template v-if="myItems.length">
                 <NCard
                     v-for="item in myItems"
@@ -36,7 +36,7 @@
         </template>
 
         <p v-else class="my-gear-page__empty">
-            Вы ещё не брали оборудование
+            Вы не найдены в списке пользователей
         </p>
     </div>
 
@@ -53,22 +53,30 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { NCard, NButton, NDrawer, NDrawerContent } from 'naive-ui'
+import { NCard, NButton, NDrawer, NDrawerContent, NSpin } from 'naive-ui'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
-import { useMyGearStore } from '@/modules/my-gear/stores/my-gear.store'
+import { useUsersStore } from '@/modules/users/stores/users.store'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import ReturnGearForm from '@/modules/my-gear/components/ReturnGearForm.vue'
 import type { GearItem } from '@/modules/gear/types/gear.types'
 
 const gearStore = useGearStore()
-const myGearStore = useMyGearStore()
+const usersStore = useUsersStore()
+const authStore = useAuthStore()
 
 const drawerOpen = ref<boolean>(false)
 const returningId = ref<string | null>(null)
 
+const isLoading = computed(() => gearStore.isLoading || usersStore.isLoading)
+
+const currentUser = computed(() =>
+    usersStore.users.find((u) => u.email === authStore.currentUserEmail) ?? null
+)
+
 const myItems = computed<GearItem[]>(() =>
-    gearStore.items.filter(
-        (i) => !i.available && i.takenBy === myGearStore.currentUserName
-    )
+    currentUser.value
+        ? gearStore.items.filter((i) => !i.available && i.takenBy === currentUser.value!.name)
+        : []
 )
 
 const openReturn = (id: string): void => {
@@ -86,9 +94,10 @@ const formatDate = (ts: number): string =>
     }).format(new Date(ts))
 
 onMounted(async () => {
-    if (!gearStore.items.length) {
-        await gearStore.fetchAll()
-    }
+    const tasks: Promise<void>[] = []
+    if (!gearStore.items.length) tasks.push(gearStore.fetchAll())
+    if (!usersStore.users.length) tasks.push(usersStore.fetchAll())
+    await Promise.all(tasks)
 })
 </script>
 
@@ -108,6 +117,12 @@ onMounted(async () => {
 
     &__card {
         margin-bottom: 8px;
+    }
+
+    &__spinner {
+        display: flex;
+        justify-content: center;
+        padding: 32px 0;
     }
 
     &__empty {

@@ -14,10 +14,11 @@
                 :options="locationOptions"
                 placeholder=""
                 filterable
+                :disabled="isSubmitting"
             />
         </NFormItem>
 
-        <NButton type="primary" attr-type="submit" block>
+        <NButton type="primary" attr-type="submit" :loading="isSubmitting" block>
             Вернуть
         </NButton>
     </NForm>
@@ -37,6 +38,7 @@ const gearStore = useGearStore()
 const settingsStore = useGearSettingsStore()
 
 const formRef = ref<FormInst | null>(null)
+const isSubmitting = ref<boolean>(false)
 const form = ref({ returnedTo: null as string | null })
 
 const locationOptions = computed<SelectOption[]>(() =>
@@ -51,11 +53,15 @@ const handleSubmit = async (): Promise<void> => {
     try {
         await formRef.value?.validate()
 
+        isSubmitting.value = true
+
         await gearStore.returnItem(props.gearId, form.value.returnedTo!)
 
         emit('submitted')
     } catch {
         // ошибки валидации обрабатывает NForm
+    } finally {
+        isSubmitting.value = false
     }
 }
 </script>
