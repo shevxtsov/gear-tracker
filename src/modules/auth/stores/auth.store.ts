@@ -3,15 +3,19 @@ import { ref } from 'vue'
 import { onAuthStateChanged } from 'firebase/auth'
 import { firebaseAuth } from '@/shared/firebase'
 import { AuthApi } from '@/modules/auth/api/auth.api'
-import type { LoginCredentials } from '@/modules/auth/types/auth.types'
+import { UsersApi } from '@/modules/users/api/users.api'
+import type { LoginCredentials, RegisterData } from '@/modules/auth/types/auth.types'
 
 export const useAuthStore = defineStore('auth', () => {
     const isAuthenticated = ref<boolean>(false)
     const isLoading = ref<boolean>(false)
     const error = ref<string | null>(null)
 
-    onAuthStateChanged(firebaseAuth, (user) => {
-        isAuthenticated.value = !!user
+    const ready = new Promise<void>((resolve) => {
+        onAuthStateChanged(firebaseAuth, (user) => {
+            isAuthenticated.value = !!user
+            resolve()
+        })
     })
 
     const login = async (credentials: LoginCredentials): Promise<void> => {
@@ -27,10 +31,24 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    const register = async (data: RegisterData): Promise<void> => {
+        isLoading.value = true
+        error.value = null
+
+        try {
+            await AuthApi.register(data.email, data.password)
+            await UsersApi.add({ name: data.name, email: data.email, phone: data.phone, role: data.role })
+        } catch (e) {
+            error.value = e instanceof Error ? e.message : 'Ошибка регистрации'
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     const logout = async (): Promise<void> => {
         await AuthApi.logout()
         error.value = null
     }
 
-    return { isAuthenticated, isLoading, error, login, logout }
+    return { isAuthenticated, isLoading, error, ready, login, register, logout }
 })
