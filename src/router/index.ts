@@ -16,8 +16,10 @@ const router = createRouter({
     routes: [...dashboardRoutes, ...gearRoutes, ...usersRoutes, ...myGearRoutes]
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
     const authStore = useAuthStore()
+
+    await authStore.ready
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
         return { name: 'dashboard' }
