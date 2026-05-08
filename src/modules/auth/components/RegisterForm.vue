@@ -85,7 +85,7 @@ import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { Utils } from '@/shared/services/utils'
 
-const emit = defineEmits<{ back: [] }>()
+const emit = defineEmits<{ back: []; submitted: [] }>()
 
 const authStore = useAuthStore()
 
@@ -138,6 +138,10 @@ const handleSubmit = async (): Promise<void> => {
             role: 'user',
             password: form.value.password
         })
+
+        if (!authStore.error) {
+            emit('submitted')
+        }
     } catch {
         // ошибки валидации обрабатывает NForm
     }
