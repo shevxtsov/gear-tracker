@@ -79,5 +79,10 @@ export const useGearStore = defineStore('gear', () => {
         items.value = items.value.filter((i) => i.id !== id)
     }
 
-    return { items, isLoading, error, fetchAll, addItem, takeItem, returnItem, updateItem, deleteItem }
+    const reset = (): void => {
+        items.value = []
+        error.value = null
+    }
+
+    return { items, isLoading, error, fetchAll, addItem, takeItem, returnItem, updateItem, deleteItem, reset }
 })

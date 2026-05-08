@@ -5,6 +5,6 @@ export const usersRoutes: RouteRecordRaw[] = [
         path: '/users',
         name: 'users',
         component: () => import('@/modules/users/components/UsersPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiresRole: ['admin', 'moderator'] }
     }
 ]

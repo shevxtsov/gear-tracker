@@ -8,8 +8,13 @@
             class="dashboard-page__auth-notice"
         >
             <div class="dashboard-page__auth-notice-content">
-                <span>Чтобы пользоваться приложением и брать оборудование нужно авторизоваться</span>
-                <NButton size="small" type="primary" @click="openLogin">Войти</NButton>
+                <span
+                    >Чтобы пользоваться приложением и брать оборудование нужно
+                    авторизоваться</span
+                >
+                <NButton size="small" type="primary" @click="openLogin"
+                    >Войти</NButton
+                >
             </div>
         </NAlert>
 
@@ -26,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { NSpin, NAlert, NButton } from 'naive-ui'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
@@ -42,11 +47,28 @@ const sortedItems = computed<GearItem[]>(() =>
     [...gearStore.items].sort((a, b) => (b.takenAt ?? 0) - (a.takenAt ?? 0))
 )
 
-onMounted(async () => {
-    if (!gearStore.items.length) {
-        await gearStore.fetchAll()
-    }
+onMounted(() => {
+    getData()
 })
+
+const getData = (): void => {
+    if (!authStore.isAuthenticated) {
+        return
+    }
+
+    if (!gearStore.items.length) {
+        gearStore.fetchAll()
+    }
+}
+
+watch(
+    () => authStore.isAuthenticated,
+    async (isAuthenticated) => {
+        if (isAuthenticated) {
+            await gearStore.fetchAll()
+        }
+    }
+)
 </script>
 
 <style lang="scss" scoped>
