@@ -40,7 +40,7 @@
 
                 <div class="nav-menu__actions">
                     <NButton
-                        v-if="!authStore.isAuthenticated"
+                        v-if="authStore.isAuthenticated"
                         type="primary"
                         block
                         @click="openTakeGearDrawer"
@@ -49,7 +49,7 @@
                     </NButton>
 
                     <NButton
-                        v-if="!authStore.isAuthenticated"
+                        v-if="authStore.isAuthenticated"
                         block
                         @click="navigate('my-gear')"
                     >
