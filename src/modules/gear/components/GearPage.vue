@@ -1,7 +1,14 @@
 <template>
     <div class="gear-page">
         <div class="gear-page__header">
-            <h1 class="gear-page__title">Оборудование</h1>
+            <div class="gear-page__header-left">
+                <NButton quaternary circle @click="router.push({ name: 'dashboard' })">
+                    <template #icon>
+                        <NIcon><ArrowBackOutline /></NIcon>
+                    </template>
+                </NButton>
+                <h1 class="gear-page__title">Оборудование</h1>
+            </div>
 
             <NButton type="primary" size="small" @click="drawerOpen = true">
                 <template #icon>
@@ -98,17 +105,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
     NSpin, NAlert, NButton, NIcon,
     NInput, NDrawer, NDrawerContent, NPopconfirm
 } from 'naive-ui'
-import { AddOutline, SearchOutline, SwapVerticalOutline, CreateOutline, TrashOutline } from '@vicons/ionicons5'
+import { AddOutline, SearchOutline, SwapVerticalOutline, CreateOutline, TrashOutline, ArrowBackOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
 import AddGearForm from '@/modules/gear/components/AddGearForm.vue'
 import EditGearForm from '@/modules/gear/components/EditGearForm.vue'
 import GearCard from '@/modules/gear/components/GearCard.vue'
 import type { GearItem } from '@/modules/gear/types/gear.types'
 
+const router = useRouter()
 const gearStore = useGearStore()
 
 const drawerOpen = ref<boolean>(false)
@@ -150,6 +159,12 @@ onMounted(async () => {
         align-items: center;
         justify-content: space-between;
         margin-bottom: 12px;
+    }
+
+    &__header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     &__title {

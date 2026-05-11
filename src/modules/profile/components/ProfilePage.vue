@@ -1,6 +1,13 @@
 <template>
     <div class="profile-page">
-        <h1 class="profile-page__title">Профиль</h1>
+        <div class="profile-page__header">
+            <NButton quaternary circle @click="router.back()">
+                <template #icon>
+                    <NIcon><ArrowBackOutline /></NIcon>
+                </template>
+            </NButton>
+            <h1 class="profile-page__title">Профиль</h1>
+        </div>
 
         <NSpin v-if="isLoading" class="profile-page__spinner" />
 
@@ -105,12 +112,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { NAvatar, NCard, NTag, NSpin, NButton, NDrawer, NDrawerContent, NForm, NFormItem, NInput, NText } from 'naive-ui'
+import { useRouter } from 'vue-router'
+import { NAvatar, NCard, NTag, NSpin, NButton, NIcon, NDrawer, NDrawerContent, NForm, NFormItem, NInput, NText } from 'naive-ui'
 import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
+import { ArrowBackOutline } from '@vicons/ionicons5'
 import { useUsersStore } from '@/modules/users/stores/users.store'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { AuthApi } from '@/modules/auth/api/auth.api'
 import { UsersService } from '@/modules/users/services/users.service'
+
+const router = useRouter()
 
 const usersStore = useUsersStore()
 const authStore = useAuthStore()
@@ -199,8 +210,14 @@ onMounted(async () => {
 }
 
 .profile-page {
-    &__title {
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         margin-bottom: 24px;
+    }
+
+    &__title {
         font-size: 24px;
         font-weight: 600;
     }

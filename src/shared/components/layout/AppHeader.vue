@@ -2,35 +2,41 @@
     <header class="app-header">
         <span class="app-header__logo" @click="router.push({ name: 'dashboard' })">Gear Tracker</span>
 
-        <div class="app-header__actions">
-            <NAvatar
-                v-if="authStore.isAuthenticated"
-                round
-                size="small"
-                class="app-header__avatar"
-                @click="router.push({ name: 'profile' })"
-            >
-                {{ profileLetter }}
-            </NAvatar>
-
-            <NButton quaternary circle @click="menuOpen = true">
-                <template #icon>
-                    <NIcon size="22"><MenuOutline /></NIcon>
-                </template>
-            </NButton>
-        </div>
+        <NButton quaternary circle @click="menuOpen = true">
+            <template #icon>
+                <NIcon size="22"><MenuOutline /></NIcon>
+            </template>
+        </NButton>
     </header>
 
     <NDrawer v-model:show="menuOpen" placement="right" :width="280">
         <NDrawerContent :native-scrollbar="false">
             <div class="nav-menu">
+                <div v-if="authStore.isAuthenticated" class="nav-menu__profile" @click="navigate('profile')">
+                    <NAvatar round size="medium" class="nav-menu__profile-avatar">
+                        {{ profileLetter }}
+                    </NAvatar>
+                    <div class="nav-menu__profile-info">
+                        <span class="nav-menu__profile-name">{{ profileName }}</span>
+                        <span class="nav-menu__profile-email">{{ authStore.currentUserEmail }}</span>
+                    </div>
+                </div>
+
                 <nav class="nav-menu__nav">
                     <button
                         class="nav-menu__item"
                         :class="{ 'nav-menu__item--active': isActive('dashboard') }"
                         @click="navigate('dashboard')"
                     >
-                        Обзор
+                        Главная
+                    </button>
+                    <button
+                        v-if="hasAdminAccess"
+                        class="nav-menu__item"
+                        :class="{ 'nav-menu__item--active': isActive('users') }"
+                        @click="navigate('users')"
+                    >
+                        Пользователи
                     </button>
                     <button
                         v-if="hasAdminAccess"
@@ -43,10 +49,18 @@
                     <button
                         v-if="hasAdminAccess"
                         class="nav-menu__item"
-                        :class="{ 'nav-menu__item--active': isActive('users') }"
-                        @click="navigate('users')"
+                        :class="{ 'nav-menu__item--active': isActive('categories') }"
+                        @click="navigate('categories')"
                     >
-                        Пользователи
+                        Категории оборудования
+                    </button>
+                    <button
+                        v-if="hasAdminAccess"
+                        class="nav-menu__item"
+                        :class="{ 'nav-menu__item--active': isActive('locations') }"
+                        @click="navigate('locations')"
+                    >
+                        Места хранения
                     </button>
                 </nav>
 
@@ -65,7 +79,7 @@
                         block
                         @click="navigate('my-gear')"
                     >
-                        Моё оборудование
+                        {{ hasAdminAccess ? 'Управление оборудованием' : 'Моё оборудование' }}
                     </NButton>
 
                     <NButton
@@ -118,8 +132,8 @@ import { NButton, NDrawer, NDrawerContent, NIcon, NAvatar } from 'naive-ui'
 import { MenuOutline, LogOutOutline, LogInOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useAuthDrawer } from '@/modules/auth/composables/use-auth-drawer'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
-import { useUsersStore } from '@/modules/users/stores/users.store'
 import LoginForm from '@/modules/auth/components/LoginForm.vue'
 import RegisterForm from '@/modules/auth/components/RegisterForm.vue'
 import TakeGearForm from '@/modules/gear/components/TakeGearForm.vue'
@@ -129,20 +143,13 @@ const route = useRoute()
 const authStore = useAuthStore()
 const { loginDrawerOpen, closeLogin } = useAuthDrawer()
 const gearStore = useGearStore()
-const usersStore = useUsersStore()
+const { currentUser, hasAdminAccess } = useCurrentUser()
 
-const hasAdminAccess = computed(() => {
-    if (!authStore.isAuthenticated) return false
-    const currentUser = usersStore.users.find((u) => u.email === authStore.currentUserEmail)
-    // не найден в коллекции → суперадмин
-    if (!currentUser) return true
-    return currentUser.role === 'admin' || currentUser.role === 'moderator'
-})
+const profileLetter = computed(() =>
+    (currentUser.value?.name ?? authStore.currentUserEmail ?? '?')[0].toUpperCase()
+)
 
-const profileLetter = computed(() => {
-    const name = usersStore.users.find((u) => u.email === authStore.currentUserEmail)?.name
-    return (name ?? authStore.currentUserEmail ?? '?')[0].toUpperCase()
-})
+const profileName = computed(() => currentUser.value?.name ?? '')
 
 const menuOpen = ref<boolean>(false)
 const registerDrawerOpen = ref<boolean>(false)
@@ -190,6 +197,7 @@ watch(
 
 <style lang="scss" scoped>
 .app-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -204,24 +212,55 @@ watch(
         color: #fff;
         cursor: pointer;
     }
-
-    &__actions {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    &__avatar {
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-    }
 }
 
 .nav-menu {
     display: flex;
     flex-direction: column;
     height: 100%;
+
+    &__profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 8px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+    }
+
+    &__profile-avatar {
+        font-size: 15px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    &__profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    &__profile-name {
+        font-size: 14px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__profile-email {
+        font-size: 11px;
+        opacity: 0.45;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
     &__nav {
         display: flex;

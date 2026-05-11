@@ -1,7 +1,14 @@
 <template>
     <div class="users-page">
         <div class="users-page__header">
-            <h1 class="users-page__title">Пользователи</h1>
+            <div class="users-page__header-left">
+                <NButton quaternary circle @click="router.push({ name: 'dashboard' })">
+                    <template #icon>
+                        <NIcon><ArrowBackOutline /></NIcon>
+                    </template>
+                </NButton>
+                <h1 class="users-page__title">Пользователи</h1>
+            </div>
 
             <NButton type="primary" size="small" @click="drawerOpen = true">
                 <template #icon>
@@ -115,17 +122,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
     NSpin, NAlert, NCard, NAvatar, NButton, NIcon,
     NInput, NDrawer, NDrawerContent, NPopconfirm, NTag
 } from 'naive-ui'
-import { AddOutline, SearchOutline, SwapVerticalOutline, CreateOutline, TrashOutline } from '@vicons/ionicons5'
+import { AddOutline, SearchOutline, SwapVerticalOutline, CreateOutline, TrashOutline, ArrowBackOutline } from '@vicons/ionicons5'
 import { useUsersStore } from '@/modules/users/stores/users.store'
 import { UsersService } from '@/modules/users/services/users.service'
 import AddUserForm from '@/modules/users/components/AddUserForm.vue'
 import EditUserForm from '@/modules/users/components/EditUserForm.vue'
 import type { User, UserRole } from '@/modules/users/types/users.types'
 
+const router = useRouter()
 const usersStore = useUsersStore()
 
 const drawerOpen = ref<boolean>(false)
@@ -175,6 +184,12 @@ onMounted(async () => {
         align-items: center;
         justify-content: space-between;
         margin-bottom: 12px;
+    }
+
+    &__header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     &__title {
