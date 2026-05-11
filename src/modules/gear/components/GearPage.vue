@@ -147,7 +147,7 @@ const visibleItems = computed<GearItem[]>(() => {
     return result
 })
 
-const menuOptions = (item: GearItem): DropdownOption[] => [
+const menuOptions = (_item: GearItem): DropdownOption[] => [
     {
         label: 'Редактировать',
         key: 'edit',
