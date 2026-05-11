@@ -9,6 +9,7 @@ import type { LoginCredentials, RegisterData } from '@/modules/auth/types/auth.t
 export const useAuthStore = defineStore('auth', () => {
     const isAuthenticated = ref<boolean>(false)
     const currentUserEmail = ref<string | null>(null)
+    const isReady = ref<boolean>(false)
     const isLoading = ref<boolean>(false)
     const error = ref<string | null>(null)
 
@@ -16,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
         onAuthStateChanged(firebaseAuth, (user) => {
             isAuthenticated.value = !!user
             currentUserEmail.value = user?.email ?? null
+            isReady.value = true
             resolve()
         })
     })
@@ -52,5 +54,5 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = null
     }
 
-    return { isAuthenticated, currentUserEmail, isLoading, error, ready, login, register, logout }
+    return { isAuthenticated, currentUserEmail, isReady, isLoading, error, ready, login, register, logout }
 })
