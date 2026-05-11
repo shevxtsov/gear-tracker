@@ -26,7 +26,7 @@ router.beforeEach(async (to) => {
     await authStore.ready
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        return { name: 'dashboard' }
+        return { name: 'dashboard', query: { redirect: to.fullPath } }
     }
 
     if (to.meta.requiresRole && authStore.isAuthenticated) {

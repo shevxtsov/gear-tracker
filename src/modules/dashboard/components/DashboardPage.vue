@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { NSpin, NAlert, NButton, NInput, NIcon, NDrawer, NDrawerContent } from 'naive-ui'
 import { SearchOutline, FunnelOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
@@ -82,6 +83,8 @@ import { useAuthDrawer } from '@/modules/auth/composables/use-auth-drawer'
 import DashboardGearCard from '@/modules/dashboard/components/DashboardGearCard.vue'
 import type { GearItem } from '@/modules/gear/types/gear.types'
 
+const router = useRouter()
+const route = useRoute()
 const gearStore = useGearStore()
 const authStore = useAuthStore()
 const { openLogin } = useAuthDrawer()
@@ -130,7 +133,12 @@ onMounted(() => {
 watch(
     () => authStore.isAuthenticated,
     async (isAuthenticated) => {
-        if (isAuthenticated) await gearStore.fetchAll()
+        if (!isAuthenticated) return
+        await gearStore.fetchAll()
+        const redirect = route.query.redirect
+        if (redirect && typeof redirect === 'string') {
+            router.replace(redirect)
+        }
     }
 )
 </script>
