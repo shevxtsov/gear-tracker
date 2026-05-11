@@ -21,6 +21,7 @@
             <NSelect
                 v-model:value="form.takenTo"
                 :options="locationOptions"
+                :loading="locationsStore.isLoading"
                 placeholder=""
                 filterable
             />
@@ -40,7 +41,7 @@
                 :options="userOptions"
                 placeholder=""
                 filterable
-                :disabled="!!currentUser"
+                :disabled="!hasAdminAccess && !!currentUser"
             />
         </NFormItem>
 
@@ -60,23 +61,19 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { NForm, NFormItem, NSelect, NButton, NDatePicker } from 'naive-ui'
 import type { FormInst, FormRules, SelectOption } from 'naive-ui'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
-import { useGearSettingsStore } from '@/modules/gear/stores/gear-settings.store'
+import { useLocationsStore } from '@/modules/locations/stores/locations.store'
 import { useUsersStore } from '@/modules/users/stores/users.store'
-import { useAuthStore } from '@/modules/auth/stores/auth.store'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
 
 const emit = defineEmits<{ submitted: [] }>()
 
 const gearStore = useGearStore()
-const settingsStore = useGearSettingsStore()
+const locationsStore = useLocationsStore()
 const usersStore = useUsersStore()
-const authStore = useAuthStore()
+const { currentUser, hasAdminAccess } = useCurrentUser()
 
 const formRef = ref<FormInst | null>(null)
 const isSubmitting = ref<boolean>(false)
-
-const currentUser = computed(() =>
-    usersStore.users.find((u) => u.email === authStore.currentUserEmail) ?? null
-)
 
 const form = ref({
     gearId: null as string | null,
@@ -86,11 +83,12 @@ const form = ref({
 })
 
 watch(currentUser, (user) => {
-    if (user) form.value.takenBy = user.name
+    if (user && !hasAdminAccess.value) form.value.takenBy = user.name
 })
 
 onMounted(() => {
     usersStore.fetchAll()
+    if (!locationsStore.items.length) locationsStore.fetchAll()
 })
 
 const availableGearOptions = computed<SelectOption[]>(() =>
@@ -100,7 +98,7 @@ const availableGearOptions = computed<SelectOption[]>(() =>
 )
 
 const locationOptions = computed<SelectOption[]>(() =>
-    settingsStore.locations.map((l) => ({ label: l, value: l }))
+    locationsStore.names.map((l) => ({ label: l, value: l }))
 )
 
 const userOptions = computed<SelectOption[]>(() =>
