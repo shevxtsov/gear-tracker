@@ -1,6 +1,6 @@
 <template>
     <header class="app-header">
-        <span class="app-header__logo">Gear Tracker</span>
+        <span class="app-header__logo" @click="router.push({ name: 'dashboard' })">Gear Tracker</span>
 
         <NButton quaternary circle @click="menuOpen = true">
             <template #icon>
@@ -12,16 +12,34 @@
     <NDrawer v-model:show="menuOpen" placement="right" :width="280">
         <NDrawerContent :native-scrollbar="false">
             <div class="nav-menu">
+                <div v-if="authStore.isAuthenticated" class="nav-menu__profile" @click="navigate('profile')">
+                    <NAvatar round size="medium" class="nav-menu__profile-avatar">
+                        {{ profileLetter }}
+                    </NAvatar>
+                    <div class="nav-menu__profile-info">
+                        <span class="nav-menu__profile-name">{{ profileName }}</span>
+                        <span class="nav-menu__profile-email">{{ authStore.currentUserEmail }}</span>
+                    </div>
+                </div>
+
                 <nav class="nav-menu__nav">
                     <button
                         class="nav-menu__item"
                         :class="{ 'nav-menu__item--active': isActive('dashboard') }"
                         @click="navigate('dashboard')"
                     >
-                        Обзор
+                        Главная
                     </button>
                     <button
-                        v-if="authStore.isAuthenticated"
+                        v-if="hasAdminAccess"
+                        class="nav-menu__item"
+                        :class="{ 'nav-menu__item--active': isActive('users') }"
+                        @click="navigate('users')"
+                    >
+                        Пользователи
+                    </button>
+                    <button
+                        v-if="hasAdminAccess"
                         class="nav-menu__item"
                         :class="{ 'nav-menu__item--active': isActive('gear') }"
                         @click="navigate('gear')"
@@ -29,18 +47,26 @@
                         Оборудование
                     </button>
                     <button
-                        v-if="authStore.isAuthenticated"
+                        v-if="hasAdminAccess"
                         class="nav-menu__item"
-                        :class="{ 'nav-menu__item--active': isActive('users') }"
-                        @click="navigate('users')"
+                        :class="{ 'nav-menu__item--active': isActive('categories') }"
+                        @click="navigate('categories')"
                     >
-                        Пользователи
+                        Категории оборудования
+                    </button>
+                    <button
+                        v-if="hasAdminAccess"
+                        class="nav-menu__item"
+                        :class="{ 'nav-menu__item--active': isActive('locations') }"
+                        @click="navigate('locations')"
+                    >
+                        Места хранения
                     </button>
                 </nav>
 
                 <div class="nav-menu__actions">
                     <NButton
-                        v-if="!authStore.isAuthenticated"
+                        v-if="authStore.isAuthenticated"
                         type="primary"
                         block
                         @click="openTakeGearDrawer"
@@ -49,11 +75,11 @@
                     </NButton>
 
                     <NButton
-                        v-if="!authStore.isAuthenticated"
+                        v-if="authStore.isAuthenticated"
                         block
                         @click="navigate('my-gear')"
                     >
-                        Моё оборудование
+                        {{ hasAdminAccess ? 'Управление оборудованием' : 'Моё оборудование' }}
                     </NButton>
 
                     <NButton
@@ -80,34 +106,53 @@
         </NDrawerContent>
     </NDrawer>
 
-    <NDrawer v-model:show="takeGearDrawerOpen" placement="bottom" :height="420">
+    <NDrawer v-model:show="takeGearDrawerOpen" placement="bottom" :height="520">
         <NDrawerContent title="Взять оборудование" :native-scrollbar="false">
             <TakeGearForm @submitted="takeGearDrawerOpen = false" />
         </NDrawerContent>
     </NDrawer>
 
     <NDrawer v-model:show="loginDrawerOpen" placement="bottom" :height="320">
-        <NDrawerContent title="Управление" :native-scrollbar="false">
-            <LoginForm />
+        <NDrawerContent title="Вход" :native-scrollbar="false">
+            <LoginForm @register="openRegisterDrawer" />
+        </NDrawerContent>
+    </NDrawer>
+
+    <NDrawer v-model:show="registerDrawerOpen" placement="bottom" :height="560">
+        <NDrawerContent title="Регистрация" :native-scrollbar="false">
+            <RegisterForm @back="openLoginDrawer" @submitted="registerDrawerOpen = false" />
         </NDrawerContent>
     </NDrawer>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NButton, NDrawer, NDrawerContent, NIcon } from 'naive-ui'
+import { NButton, NDrawer, NDrawerContent, NIcon, NAvatar } from 'naive-ui'
 import { MenuOutline, LogOutOutline, LogInOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
+import { useAuthDrawer } from '@/modules/auth/composables/use-auth-drawer'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
+import { useGearStore } from '@/modules/gear/stores/gear.store'
 import LoginForm from '@/modules/auth/components/LoginForm.vue'
+import RegisterForm from '@/modules/auth/components/RegisterForm.vue'
 import TakeGearForm from '@/modules/gear/components/TakeGearForm.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { loginDrawerOpen, closeLogin } = useAuthDrawer()
+const gearStore = useGearStore()
+const { currentUser, hasAdminAccess } = useCurrentUser()
+
+const profileLetter = computed(() =>
+    (currentUser.value?.name ?? authStore.currentUserEmail ?? '?')[0].toUpperCase()
+)
+
+const profileName = computed(() => currentUser.value?.name ?? '')
 
 const menuOpen = ref<boolean>(false)
-const loginDrawerOpen = ref<boolean>(false)
+const registerDrawerOpen = ref<boolean>(false)
 const takeGearDrawerOpen = ref<boolean>(false)
 
 const isActive = (name: string): boolean => route.name === name
@@ -119,7 +164,13 @@ const navigate = (name: string): void => {
 
 const openLoginDrawer = (): void => {
     menuOpen.value = false
+    registerDrawerOpen.value = false
     loginDrawerOpen.value = true
+}
+
+const openRegisterDrawer = (): void => {
+    loginDrawerOpen.value = false
+    registerDrawerOpen.value = true
 }
 
 const openTakeGearDrawer = (): void => {
@@ -129,6 +180,7 @@ const openTakeGearDrawer = (): void => {
 
 const handleLogout = (): void => {
     authStore.logout()
+    gearStore.reset()
     menuOpen.value = false
     router.push({ name: 'dashboard' })
 }
@@ -137,7 +189,7 @@ watch(
     () => authStore.isAuthenticated,
     (isAuthenticated: boolean) => {
         if (isAuthenticated) {
-            loginDrawerOpen.value = false
+            closeLogin()
         }
     }
 )
@@ -145,6 +197,7 @@ watch(
 
 <style lang="scss" scoped>
 .app-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -157,6 +210,7 @@ watch(
         font-size: 16px;
         font-weight: 600;
         color: #fff;
+        cursor: pointer;
     }
 }
 
@@ -164,6 +218,49 @@ watch(
     display: flex;
     flex-direction: column;
     height: 100%;
+
+    &__profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 8px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+    }
+
+    &__profile-avatar {
+        font-size: 15px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    &__profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    &__profile-name {
+        font-size: 14px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__profile-email {
+        font-size: 11px;
+        opacity: 0.45;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
     &__nav {
         display: flex;

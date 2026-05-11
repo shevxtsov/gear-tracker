@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: 'AIzaSyDD_wjdpG5pSp5IELj8SXE-YyhHp7s3cTw',
     authDomain: 'gears-tracker.firebaseapp.com',
     projectId: 'gears-tracker',

@@ -1,13 +1,20 @@
 <template>
     <div class="my-gear-page">
-        <h1 class="my-gear-page__title">Моё оборудование</h1>
+        <div class="my-gear-page__header">
+            <NButton quaternary circle @click="router.push({ name: 'dashboard' })">
+                <template #icon>
+                    <NIcon><ArrowBackOutline /></NIcon>
+                </template>
+            </NButton>
+            <h1 class="my-gear-page__title">{{ pageTitle }}</h1>
+        </div>
 
-        <template v-if="myGearStore.currentUserName">
-            <p class="my-gear-page__user">{{ myGearStore.currentUserName }}</p>
+        <NSpin v-if="isLoading" class="my-gear-page__spinner" />
 
-            <template v-if="myItems.length">
+        <template v-else>
+            <template v-if="displayItems.length">
                 <NCard
-                    v-for="item in myItems"
+                    v-for="item in displayItems"
                     :key="item.id"
                     size="small"
                     class="my-gear-page__card"
@@ -16,6 +23,7 @@
                         <div class="my-gear-card__info">
                             <span class="my-gear-card__name">{{ item.name }}</span>
                             <span class="my-gear-card__meta">{{ item.category }} · {{ item.takenTo }}</span>
+                            <span v-if="hasAdminAccess" class="my-gear-card__user">{{ item.takenBy }}</span>
                             <span class="my-gear-card__date">{{ formatDate(item.takenAt!) }}</span>
                         </div>
 
@@ -31,16 +39,12 @@
             </template>
 
             <p v-else class="my-gear-page__empty">
-                У вас нет взятого оборудования
+                {{ hasAdminAccess ? 'Всё оборудование на месте' : 'У вас нет взятого оборудования' }}
             </p>
         </template>
-
-        <p v-else class="my-gear-page__empty">
-            Вы ещё не брали оборудование
-        </p>
     </div>
 
-    <NDrawer v-model:show="drawerOpen" placement="bottom" :height="240">
+    <NDrawer v-model:show="drawerOpen" placement="bottom" :height="300">
         <NDrawerContent title="Вернуть оборудование" :native-scrollbar="false">
             <ReturnGearForm
                 v-if="returningId"
@@ -53,23 +57,34 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { NCard, NButton, NDrawer, NDrawerContent } from 'naive-ui'
+import { useRouter } from 'vue-router'
+import { NCard, NButton, NIcon, NDrawer, NDrawerContent, NSpin } from 'naive-ui'
+import { ArrowBackOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
-import { useMyGearStore } from '@/modules/my-gear/stores/my-gear.store'
+import { useUsersStore } from '@/modules/users/stores/users.store'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
 import ReturnGearForm from '@/modules/my-gear/components/ReturnGearForm.vue'
 import type { GearItem } from '@/modules/gear/types/gear.types'
 
+const router = useRouter()
 const gearStore = useGearStore()
-const myGearStore = useMyGearStore()
+const usersStore = useUsersStore()
+const { currentUser, hasAdminAccess } = useCurrentUser()
 
 const drawerOpen = ref<boolean>(false)
 const returningId = ref<string | null>(null)
 
-const myItems = computed<GearItem[]>(() =>
-    gearStore.items.filter(
-        (i) => !i.available && i.takenBy === myGearStore.currentUserName
-    )
+const isLoading = computed(() => gearStore.isLoading || usersStore.isLoading)
+
+const pageTitle = computed(() =>
+    hasAdminAccess.value ? 'Управление оборудованием' : 'Моё оборудование'
 )
+
+const displayItems = computed<GearItem[]>(() => {
+    const taken = gearStore.items.filter((i) => !i.available)
+    if (hasAdminAccess.value) return taken
+    return taken.filter((i) => i.takenBy === currentUser.value?.name)
+})
 
 const openReturn = (id: string): void => {
     returningId.value = id
@@ -86,28 +101,35 @@ const formatDate = (ts: number): string =>
     }).format(new Date(ts))
 
 onMounted(async () => {
-    if (!gearStore.items.length) {
-        await gearStore.fetchAll()
-    }
+    const tasks: Promise<void>[] = []
+    if (!gearStore.items.length) tasks.push(gearStore.fetchAll())
+    if (!usersStore.users.length) tasks.push(usersStore.fetchAll())
+    await Promise.all(tasks)
 })
 </script>
 
 <style lang="scss" scoped>
 .my-gear-page {
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
     &__title {
-        margin-bottom: 4px;
         font-size: 24px;
         font-weight: 600;
     }
 
-    &__user {
-        margin-bottom: 16px;
-        font-size: 13px;
-        opacity: 0.5;
-    }
-
     &__card {
         margin-bottom: 8px;
+    }
+
+    &__spinner {
+        display: flex;
+        justify-content: center;
+        padding: 32px 0;
     }
 
     &__empty {
@@ -142,6 +164,11 @@ onMounted(async () => {
     &__meta {
         font-size: 12px;
         opacity: 0.5;
+    }
+
+    &__user {
+        font-size: 12px;
+        color: #63e2b7;
     }
 
     &__date {

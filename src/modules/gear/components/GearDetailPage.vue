@@ -32,16 +32,34 @@
             Нет записей об использовании
         </p>
 
-        <NTimeline v-else>
-            <NTimelineItem
+        <div v-else class="gear-history">
+            <div
                 v-for="record in history"
                 :key="record.id"
-                :time="formatDate(record.takenAt)"
+                class="gear-history__record"
             >
-                <template #header>{{ record.takenBy }}</template>
-                <span class="gear-detail__record-location">{{ record.takenTo }}</span>
-            </NTimelineItem>
-        </NTimeline>
+                <div class="gear-history__row">
+                    <NTag type="warning" size="small" round>Взято</NTag>
+                    <div class="gear-history__details">
+                        <span class="gear-history__date">{{ formatDate(record.takenAt) }}</span>
+                        <span class="gear-history__meta">{{ record.takenBy }} · {{ record.takenTo }}</span>
+                    </div>
+                </div>
+
+                <div class="gear-history__row">
+                    <NTag :type="record.returnedAt ? 'success' : 'error'" size="small" round>
+                        {{ record.returnedAt ? 'Возврат' : 'В процессе' }}
+                    </NTag>
+                    <div class="gear-history__details">
+                        <template v-if="record.returnedAt">
+                            <span class="gear-history__date">{{ formatDate(record.returnedAt) }}</span>
+                            <span class="gear-history__meta">{{ record.returnedTo }}</span>
+                        </template>
+                        <span v-else class="gear-history__date gear-history__date--muted">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div v-else class="gear-detail__not-found">
@@ -52,7 +70,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NButton, NIcon, NCard, NTag, NTimeline, NTimelineItem } from 'naive-ui'
+import { NButton, NIcon, NCard, NTag } from 'naive-ui'
 import { ArrowBackOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
 import type { GearUsageRecord } from '@/modules/gear/types/gear.types'
@@ -125,15 +143,52 @@ const formatDate = (ts: number): string =>
         padding: 24px 0;
     }
 
-    &__record-location {
-        font-size: 13px;
-        opacity: 0.6;
-    }
-
     &__not-found {
         padding: 32px 0;
         text-align: center;
         opacity: 0.4;
+    }
+}
+
+.gear-history {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    &__record {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 8px;
+        background-color: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    &__row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    &__details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__date {
+        font-size: 13px;
+        font-weight: 500;
+
+        &--muted {
+            opacity: 0.35;
+        }
+    }
+
+    &__meta {
+        font-size: 12px;
+        opacity: 0.5;
     }
 }
 </style>

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { GearService } from '@/modules/gear/services/gear.service'
+import { GearApi } from '@/modules/gear/api/gear.api'
 import type { GearItem, GearUsageRecord } from '@/modules/gear/types/gear.types'
 
 export const useGearStore = defineStore('gear', () => {
@@ -13,7 +13,7 @@ export const useGearStore = defineStore('gear', () => {
         error.value = null
 
         try {
-            items.value = await GearService.getAll()
+            items.value = await GearApi.getAll()
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Ошибка загрузки'
         } finally {
@@ -21,72 +21,68 @@ export const useGearStore = defineStore('gear', () => {
         }
     }
 
-    const addItem = (item: Omit<GearItem, 'id' | 'available' | 'takenBy' | 'takenTo' | 'takenAt' | 'history'>): void => {
-        items.value.push({
+    const addItem = async (item: Omit<GearItem, 'id' | 'available' | 'takenBy' | 'takenTo' | 'takenAt' | 'history'>): Promise<void> => {
+        const newItem = await GearApi.add({
             ...item,
-            id: Date.now().toString(),
             available: true,
             takenBy: null,
             takenTo: null,
             takenAt: null,
             history: []
         })
+        items.value.push(newItem)
     }
 
-    const takeItem = (id: string, data: { takenBy: string; takenTo: string; takenAt: number }): void => {
+    const takeItem = async (id: string, data: { takenBy: string; takenTo: string; takenAt: number }): Promise<void> => {
         const index = items.value.findIndex((i) => i.id === id)
+        if (index === -1) return
 
-        if (index !== -1) {
-            const record: GearUsageRecord = {
-                id: Date.now().toString(),
-                ...data,
-                returnedAt: null,
-                returnedTo: null
-            }
-            const history = [...items.value[index].history, record].slice(-5)
-
-            items.value[index] = { ...items.value[index], available: false, ...data, history }
-            items.value[index].history = history
+        const record: GearUsageRecord = {
+            id: Date.now().toString(),
+            ...data,
+            returnedAt: null,
+            returnedTo: null
         }
+        const history = [...items.value[index].history, record].slice(-5)
+        const patch = { available: false, ...data, history }
+
+        await GearApi.update(id, patch)
+        items.value[index] = { ...items.value[index], ...patch }
     }
 
-    const returnItem = (id: string, returnedTo: string): void => {
+    const returnItem = async (id: string, returnedTo: string): Promise<void> => {
         const index = items.value.findIndex((i) => i.id === id)
+        if (index === -1) return
 
-        if (index !== -1) {
-            const history = [...items.value[index].history]
-            const lastIndex = history.length - 1
-
-            if (lastIndex >= 0) {
-                history[lastIndex] = {
-                    ...history[lastIndex],
-                    returnedAt: Date.now(),
-                    returnedTo
-                }
-            }
-
-            items.value[index] = {
-                ...items.value[index],
-                available: true,
-                takenBy: null,
-                takenTo: null,
-                takenAt: null,
-                history
-            }
+        const history = [...items.value[index].history]
+        const lastIndex = history.length - 1
+        if (lastIndex >= 0) {
+            history[lastIndex] = { ...history[lastIndex], returnedAt: Date.now(), returnedTo }
         }
+
+        const patch = { available: true, takenBy: null, takenTo: null, takenAt: null, history }
+
+        await GearApi.update(id, patch)
+        items.value[index] = { ...items.value[index], ...patch }
     }
 
-    const updateItem = (id: string, patch: Pick<GearItem, 'name' | 'category' | 'location'>): void => {
+    const updateItem = async (id: string, patch: Pick<GearItem, 'name' | 'category' | 'location'>): Promise<void> => {
+        await GearApi.update(id, patch)
         const index = items.value.findIndex((i) => i.id === id)
-
         if (index !== -1) {
             items.value[index] = { ...items.value[index], ...patch }
         }
     }
 
-    const deleteItem = (id: string): void => {
+    const deleteItem = async (id: string): Promise<void> => {
+        await GearApi.delete(id)
         items.value = items.value.filter((i) => i.id !== id)
     }
 
-    return { items, isLoading, error, fetchAll, addItem, takeItem, returnItem, updateItem, deleteItem }
+    const reset = (): void => {
+        items.value = []
+        error.value = null
+    }
+
+    return { items, isLoading, error, fetchAll, addItem, takeItem, returnItem, updateItem, deleteItem, reset }
 })

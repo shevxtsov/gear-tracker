@@ -40,6 +40,10 @@
         >
             Войти
         </NButton>
+
+        <NButton text block class="login-form__register" @click="emit('register')">
+            Нет аккаунта? Зарегистрироваться
+        </NButton>
     </NForm>
 </template>
 
@@ -49,6 +53,8 @@ import { NForm, NFormItem, NInput, NButton, NText } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import type { LoginCredentials } from '@/modules/auth/types/auth.types'
+
+const emit = defineEmits<{ register: [] }>()
 
 const authStore = useAuthStore()
 
@@ -94,6 +100,11 @@ const handleSubmit = async (): Promise<void> => {
     &__error {
         display: block;
         margin-bottom: 16px;
+    }
+
+    &__register {
+        margin-top: 8px;
+        opacity: 0.6;
     }
 }
 </style>

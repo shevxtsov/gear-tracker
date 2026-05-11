@@ -21,6 +21,7 @@
                 <NSelect
                     v-model:value="form.category"
                     :options="categoryOptions"
+                    :loading="categoriesStore.isLoading"
                     placeholder=""
                     filterable
                     :disabled="isSubmitting"
@@ -38,6 +39,7 @@
                 <NSelect
                     v-model:value="form.location"
                     :options="locationOptions"
+                    :loading="locationsStore.isLoading"
                     placeholder=""
                     filterable
                     :disabled="isSubmitting"
@@ -74,12 +76,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { NForm, NFormItem, NInput, NSelect, NButton, NIcon } from 'naive-ui'
 import type { FormInst, FormRules, SelectOption } from 'naive-ui'
 import { AddOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
-import { useGearSettingsStore } from '@/modules/gear/stores/gear-settings.store'
+import { useCategoriesStore } from '@/modules/categories/stores/categories.store'
+import { useLocationsStore } from '@/modules/locations/stores/locations.store'
 import AddOptionModal from '@/shared/components/AddOptionModal.vue'
 import type { GearItem } from '@/modules/gear/types/gear.types'
 
@@ -87,7 +90,8 @@ const props = defineProps<{ item: GearItem }>()
 const emit = defineEmits<{ submitted: [] }>()
 
 const gearStore = useGearStore()
-const settingsStore = useGearSettingsStore()
+const categoriesStore = useCategoriesStore()
+const locationsStore = useLocationsStore()
 
 const formRef = ref<FormInst | null>(null)
 const isSubmitting = ref<boolean>(false)
@@ -101,11 +105,11 @@ const form = ref({
 })
 
 const categoryOptions = computed<SelectOption[]>(() =>
-    settingsStore.categories.map((c) => ({ label: c, value: c }))
+    categoriesStore.names.map((c) => ({ label: c, value: c }))
 )
 
 const locationOptions = computed<SelectOption[]>(() =>
-    settingsStore.locations.map((l) => ({ label: l, value: l }))
+    locationsStore.names.map((l) => ({ label: l, value: l }))
 )
 
 const rules: FormRules = {
@@ -114,15 +118,20 @@ const rules: FormRules = {
     location: [{ required: true, message: 'Выберите место хранения', trigger: 'change' }]
 }
 
-const onConfirmCategory = (value: string): void => {
-    settingsStore.addCategory(value)
+const onConfirmCategory = async (value: string): Promise<void> => {
+    await categoriesStore.add(value)
     form.value.category = value
 }
 
-const onConfirmLocation = (value: string): void => {
-    settingsStore.addLocation(value)
+const onConfirmLocation = async (value: string): Promise<void> => {
+    await locationsStore.add(value)
     form.value.location = value
 }
+
+onMounted(() => {
+    if (!categoriesStore.items.length) categoriesStore.fetchAll()
+    if (!locationsStore.items.length) locationsStore.fetchAll()
+})
 
 const handleSubmit = async (): Promise<void> => {
     try {
@@ -130,7 +139,7 @@ const handleSubmit = async (): Promise<void> => {
 
         isSubmitting.value = true
 
-        gearStore.updateItem(props.item.id, {
+        await gearStore.updateItem(props.item.id, {
             name: form.value.name,
             category: form.value.category,
             location: form.value.location

@@ -21,6 +21,7 @@
             <NSelect
                 v-model:value="form.takenTo"
                 :options="locationOptions"
+                :loading="locationsStore.isLoading"
                 placeholder=""
                 filterable
             />
@@ -35,19 +36,13 @@
         </NFormItem>
 
         <NFormItem label="Кто берет" path="takenBy">
-            <div class="field-row">
-                <NSelect
-                    v-model:value="form.takenBy"
-                    :options="userOptions"
-                    placeholder=""
-                    filterable
-                />
-                <NButton quaternary circle @click="showAddUserModal = true">
-                    <template #icon>
-                        <NIcon><AddOutline /></NIcon>
-                    </template>
-                </NButton>
-            </div>
+            <NSelect
+                v-model:value="form.takenBy"
+                :options="userOptions"
+                placeholder=""
+                filterable
+                :disabled="!hasAdminAccess && !!currentUser"
+            />
         </NFormItem>
 
         <NButton
@@ -59,44 +54,41 @@
             Взять
         </NButton>
     </NForm>
-
-    <AddUserModal
-        v-model:show="showAddUserModal"
-        @confirmed="onUserAdded"
-    />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { NForm, NFormItem, NSelect, NButton, NIcon, NDatePicker } from 'naive-ui'
+import { ref, computed, onMounted, watch } from 'vue'
+import { NForm, NFormItem, NSelect, NButton, NDatePicker } from 'naive-ui'
 import type { FormInst, FormRules, SelectOption } from 'naive-ui'
-import { AddOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
-import { useGearSettingsStore } from '@/modules/gear/stores/gear-settings.store'
+import { useLocationsStore } from '@/modules/locations/stores/locations.store'
 import { useUsersStore } from '@/modules/users/stores/users.store'
-import { useMyGearStore } from '@/modules/my-gear/stores/my-gear.store'
-import AddUserModal from '@/shared/components/AddUserModal.vue'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
 
 const emit = defineEmits<{ submitted: [] }>()
 
 const gearStore = useGearStore()
-const settingsStore = useGearSettingsStore()
+const locationsStore = useLocationsStore()
 const usersStore = useUsersStore()
-const myGearStore = useMyGearStore()
+const { currentUser, hasAdminAccess } = useCurrentUser()
 
 const formRef = ref<FormInst | null>(null)
 const isSubmitting = ref<boolean>(false)
-const showAddUserModal = ref<boolean>(false)
 
 const form = ref({
     gearId: null as string | null,
     takenTo: null as string | null,
     takenAt: Date.now() as number | null,
-    takenBy: null as string | null
+    takenBy: currentUser.value?.name ?? null as string | null
+})
+
+watch(currentUser, (user) => {
+    if (user && !hasAdminAccess.value) form.value.takenBy = user.name
 })
 
 onMounted(() => {
     usersStore.fetchAll()
+    if (!locationsStore.items.length) locationsStore.fetchAll()
 })
 
 const availableGearOptions = computed<SelectOption[]>(() =>
@@ -106,7 +98,7 @@ const availableGearOptions = computed<SelectOption[]>(() =>
 )
 
 const locationOptions = computed<SelectOption[]>(() =>
-    settingsStore.locations.map((l) => ({ label: l, value: l }))
+    locationsStore.names.map((l) => ({ label: l, value: l }))
 )
 
 const userOptions = computed<SelectOption[]>(() =>
@@ -120,23 +112,17 @@ const rules: FormRules = {
     takenBy: [{ required: true, message: 'Укажите кто берет', trigger: 'change' }]
 }
 
-const onUserAdded = (name: string): void => {
-    form.value.takenBy = name
-}
-
 const handleSubmit = async (): Promise<void> => {
     try {
         await formRef.value?.validate()
 
         isSubmitting.value = true
 
-        gearStore.takeItem(form.value.gearId!, {
+        await gearStore.takeItem(form.value.gearId!, {
             takenBy: form.value.takenBy!,
             takenTo: form.value.takenTo!,
             takenAt: form.value.takenAt!
         })
-
-        myGearStore.setCurrentUser(form.value.takenBy!)
 
         emit('submitted')
     } catch {
@@ -162,17 +148,6 @@ const handleSubmit = async (): Promise<void> => {
 
     &__datepicker {
         width: 100%;
-    }
-}
-
-.field-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-
-    .n-select {
-        flex: 1;
     }
 }
 </style>
