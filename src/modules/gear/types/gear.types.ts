@@ -19,20 +19,3 @@ export interface GearItem {
     history: GearUsageRecord[]
 }
 
-export const GEAR_LOCATIONS: string[] = [
-    'Большой зал - сцена',
-    'ГДБ',
-    'Гримерка'
-]
-
-export const GEAR_CATEGORIES: string[] = [
-    'Гитара',
-    'Бас-гитара',
-    'Ударные',
-    'Клавишные',
-    'Микрофон',
-    'Усилитель',
-    'Акустика',
-    'Кабели и коммутация',
-    'Прочее'
-]

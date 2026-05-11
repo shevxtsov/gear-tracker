@@ -6,6 +6,8 @@ import { gearRoutes } from '@/modules/gear/routes'
 import { usersRoutes } from '@/modules/users/routes'
 import { myGearRoutes } from '@/modules/my-gear/routes'
 import { profileRoutes } from '@/modules/profile/routes'
+import { locationsRoutes } from '@/modules/locations/routes'
+import { categoriesRoutes } from '@/modules/categories/routes'
 
 declare module 'vue-router' {
     interface RouteMeta {
@@ -16,7 +18,7 @@ declare module 'vue-router' {
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
-    routes: [...dashboardRoutes, ...gearRoutes, ...usersRoutes, ...myGearRoutes, ...profileRoutes]
+    routes: [...dashboardRoutes, ...gearRoutes, ...usersRoutes, ...myGearRoutes, ...profileRoutes, ...locationsRoutes, ...categoriesRoutes]
 })
 
 router.beforeEach(async (to) => {
