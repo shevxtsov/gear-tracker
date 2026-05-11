@@ -57,29 +57,30 @@
                     :item="item"
                 >
                     <template #actions>
-                        <NButton
-                            quaternary
-                            circle
-                            size="small"
-                            @click="openEdit(item)"
+                        <NDropdown
+                            trigger="click"
+                            :options="menuOptions(item)"
+                            @select="(key) => handleMenuSelect(key, item)"
                         >
-                            <template #icon>
-                                <NIcon><CreateOutline /></NIcon>
-                            </template>
-                        </NButton>
-
-                        <NPopconfirm positive-text="Подтвердить" negative-text="Отмена" @positive-click="gearStore.deleteItem(item.id)">
-                            <template #trigger>
-                                <NButton quaternary circle size="small">
-                                    <template #icon>
-                                        <NIcon color="#e88080"><TrashOutline /></NIcon>
-                                    </template>
-                                </NButton>
-                            </template>
-                            Удалить «{{ item.name }}»?
-                        </NPopconfirm>
+                            <NButton quaternary circle size="small">
+                                <template #icon>
+                                    <NIcon><EllipsisVertical /></NIcon>
+                                </template>
+                            </NButton>
+                        </NDropdown>
                     </template>
                 </GearCard>
+
+                <NModal
+                    v-model:show="deleteConfirmOpen"
+                    preset="dialog"
+                    type="error"
+                    title="Удалить оборудование?"
+                    :content="deletingItem ? `«${deletingItem.name}» будет удалено безвозвратно` : ''"
+                    positive-text="Удалить"
+                    negative-text="Отмена"
+                    @positive-click="confirmDelete"
+                />
             </div>
 
             <p v-else class="gear-page__empty">Ничего не найдено</p>
@@ -104,13 +105,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
 import {
     NSpin, NAlert, NButton, NIcon,
-    NInput, NDrawer, NDrawerContent, NPopconfirm
+    NInput, NDrawer, NDrawerContent, NDropdown, NModal, useMessage
 } from 'naive-ui'
-import { AddOutline, SearchOutline, SwapVerticalOutline, CreateOutline, TrashOutline, ArrowBackOutline } from '@vicons/ionicons5'
+import type { DropdownOption } from 'naive-ui'
+import { AddOutline, SearchOutline, SwapVerticalOutline, ArrowBackOutline, EllipsisVertical, CreateOutline, TrashOutline, LinkOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
 import AddGearForm from '@/modules/gear/components/AddGearForm.vue'
 import EditGearForm from '@/modules/gear/components/EditGearForm.vue'
@@ -118,11 +120,14 @@ import GearCard from '@/modules/gear/components/GearCard.vue'
 import type { GearItem } from '@/modules/gear/types/gear.types'
 
 const router = useRouter()
+const message = useMessage()
 const gearStore = useGearStore()
 
 const drawerOpen = ref<boolean>(false)
 const editDrawerOpen = ref<boolean>(false)
 const editingItem = ref<GearItem | null>(null)
+const deletingItem = ref<GearItem | null>(null)
+const deleteConfirmOpen = ref<boolean>(false)
 const searchQuery = ref<string>('')
 const isSorted = ref<boolean>(false)
 
@@ -142,10 +147,47 @@ const visibleItems = computed<GearItem[]>(() => {
     return result
 })
 
-const openEdit = (item: GearItem): void => {
-    editingItem.value = item
-    editDrawerOpen.value = true
+const menuOptions = (item: GearItem): DropdownOption[] => [
+    {
+        label: 'Редактировать',
+        key: 'edit',
+        icon: () => h(NIcon, null, { default: () => h(CreateOutline) })
+    },
+    {
+        label: 'Получить ссылку',
+        key: 'link',
+        icon: () => h(NIcon, null, { default: () => h(LinkOutline) })
+    },
+    { type: 'divider', key: 'divider' },
+    {
+        label: 'Удалить',
+        key: 'delete',
+        icon: () => h(NIcon, { color: '#e88080' }, { default: () => h(TrashOutline) })
+    }
+]
+
+const handleMenuSelect = (key: string, item: GearItem): void => {
+    if (key === 'edit') {
+        editingItem.value = item
+        editDrawerOpen.value = true
+    } else if (key === 'link') {
+        const url = `${window.location.origin}/gear/gear-detail/${item.id}`
+        navigator.clipboard.writeText(url)
+        message.success('Ссылка скопирована')
+    } else if (key === 'delete') {
+        deletingItem.value = item
+        deleteConfirmOpen.value = true
+    }
 }
+
+const confirmDelete = async (): Promise<void> => {
+    if (deletingItem.value) {
+        await gearStore.deleteItem(deletingItem.value.id)
+        deletingItem.value = null
+    }
+}
+
+
 
 onMounted(async () => {
     await gearStore.fetchAll()

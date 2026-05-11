@@ -22,7 +22,7 @@ const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> =>
 export class UsersApi {
     static getAll = async (): Promise<User[]> => {
         const snapshot = await withTimeout(getDocsFromServer(collection(firebaseDb, COLLECTION)))
-        return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as User))
+        return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as User))
     }
 
     static add = async (data: Omit<User, 'id'>): Promise<User> => {
