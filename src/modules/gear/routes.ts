@@ -11,6 +11,6 @@ export const gearRoutes: RouteRecordRaw[] = [
         path: '/gear/:id',
         name: 'gear-detail',
         component: () => import('@/modules/gear/components/GearDetailPage.vue'),
-        meta: { requiresAuth: true, requiresRole: ['admin', 'moderator'] }
+        meta: { requiresAuth: true }
     }
 ]
