@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { UsersApi } from '@/modules/users/api/users.api'
-import type { User } from '@/modules/users/types/users.types'
+import type { User, UserStatus } from '@/modules/users/types/users.types'
 
 export const useUsersStore = defineStore('users', () => {
     const users = ref<User[]>([])
     const isLoading = ref<boolean>(false)
     const error = ref<string | null>(null)
+    const loadingIds = ref(new Set<string>())
 
     const fetchAll = async (): Promise<void> => {
         isLoading.value = true
@@ -30,25 +31,50 @@ export const useUsersStore = defineStore('users', () => {
         id: string,
         patch: Omit<User, 'id'>
     ): Promise<void> => {
-        await UsersApi.update(id, patch)
-        const index = users.value.findIndex((u) => u.id === id)
-        if (index !== -1) {
-            users.value[index] = { ...users.value[index], ...patch }
+        loadingIds.value.add(id)
+        try {
+            await UsersApi.update(id, patch)
+            const index = users.value.findIndex((u) => u.id === id)
+            if (index !== -1) {
+                users.value[index] = { ...users.value[index], ...patch }
+            }
+        } finally {
+            loadingIds.value.delete(id)
         }
     }
 
     const deleteUser = async (id: string): Promise<void> => {
-        await UsersApi.delete(id)
-        users.value = users.value.filter((u) => u.id !== id)
+        loadingIds.value.add(id)
+        try {
+            await UsersApi.delete(id)
+            users.value = users.value.filter((u) => u.id !== id)
+        } finally {
+            loadingIds.value.delete(id)
+        }
+    }
+
+    const updateStatus = async (id: string, status: UserStatus): Promise<void> => {
+        loadingIds.value.add(id)
+        try {
+            await UsersApi.updateStatus(id, status)
+            const index = users.value.findIndex((u) => u.id === id)
+            if (index !== -1) {
+                users.value[index] = { ...users.value[index], status }
+            }
+        } finally {
+            loadingIds.value.delete(id)
+        }
     }
 
     return {
         users,
         isLoading,
+        loadingIds,
         error,
         fetchAll,
         addUser,
         updateUser,
-        deleteUser
+        deleteUser,
+        updateStatus
     }
 })

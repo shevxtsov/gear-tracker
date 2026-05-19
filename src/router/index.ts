@@ -8,6 +8,7 @@ import { myGearRoutes } from '@/modules/my-gear/routes'
 import { profileRoutes } from '@/modules/profile/routes'
 import { locationsRoutes } from '@/modules/locations/routes'
 import { categoriesRoutes } from '@/modules/categories/routes'
+import PendingApprovalPage from '@/modules/auth/components/PendingApprovalPage.vue'
 
 declare module 'vue-router' {
     interface RouteMeta {
@@ -18,7 +19,16 @@ declare module 'vue-router' {
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
-    routes: [...dashboardRoutes, ...gearRoutes, ...usersRoutes, ...myGearRoutes, ...profileRoutes, ...locationsRoutes, ...categoriesRoutes]
+    routes: [
+        { path: '/pending-approval', name: 'pending-approval', component: PendingApprovalPage, meta: { requiresAuth: true } },
+        ...dashboardRoutes,
+        ...gearRoutes,
+        ...usersRoutes,
+        ...myGearRoutes,
+        ...profileRoutes,
+        ...locationsRoutes,
+        ...categoriesRoutes
+    ]
 })
 
 router.beforeEach(async (to) => {
@@ -29,13 +39,35 @@ router.beforeEach(async (to) => {
         return { name: 'dashboard', query: { redirect: to.fullPath } }
     }
 
-    if (to.meta.requiresRole && authStore.isAuthenticated) {
+    if (authStore.isAuthenticated) {
         const usersStore = useUsersStore()
         if (!usersStore.users.length) await usersStore.fetchAll()
 
         const currentUser = usersStore.users.find((u) => u.email === authStore.currentUserEmail)
-        // пользователь не найден в коллекции → суперадмин → полный доступ
-        if (currentUser && !to.meta.requiresRole.includes(currentUser.role)) {
+
+        // пользователь удалён из коллекции, но Auth-аккаунт остался → выкидываем
+        if (!currentUser && usersStore.users.length > 0) {
+            await authStore.forceLogout()
+            return { name: 'dashboard' }
+        }
+
+        const status = currentUser?.status ?? 'approved'
+
+        if (status === 'blocked') {
+            await authStore.forceLogout()
+            return { name: 'dashboard' }
+        }
+
+        if (status === 'pending' && to.name !== 'pending-approval') {
+            return { name: 'pending-approval' }
+        }
+
+        if (status !== 'pending' && to.name === 'pending-approval') {
+            return { name: 'dashboard' }
+        }
+
+        // пользователь не найден и записей нет вовсе → суперадмин → полный доступ
+        if (to.meta.requiresRole && currentUser && !to.meta.requiresRole.includes(currentUser.role)) {
             return { name: 'dashboard' }
         }
     }

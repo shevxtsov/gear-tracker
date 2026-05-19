@@ -67,7 +67,7 @@ import { useUsersStore } from '@/modules/users/stores/users.store'
 import { AuthApi } from '@/modules/auth/api/auth.api'
 import { ROLE_OPTIONS } from '@/modules/users/services/users.service'
 import { Utils } from '@/shared/services/utils'
-import type { UserRole } from '@/modules/users/types/users.types'
+import type { UserRole, UserStatus } from '@/modules/users/types/users.types'
 
 const emit = defineEmits<{ submitted: [] }>()
 
@@ -112,7 +112,8 @@ const handleSubmit = async (): Promise<void> => {
             name: form.value.name,
             email: form.value.email,
             phone: Utils.maskPhone(form.value.phone),
-            role: form.value.role
+            role: form.value.role,
+            status: 'approved' as UserStatus
         })
 
         emit('submitted')
