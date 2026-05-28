@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { firebaseAuth } from '@/shared/firebase'
 import { AuthApi } from '@/modules/auth/api/auth.api'
 import { UsersApi } from '@/modules/users/api/users.api'
+import { useUsersStore } from '@/modules/users/stores/users.store'
 import type { LoginCredentials, RegisterData } from '@/modules/auth/types/auth.types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -41,7 +42,9 @@ export const useAuthStore = defineStore('auth', () => {
 
         try {
             const uid = await AuthApi.register(data.email, data.password)
-            await UsersApi.add(uid, { name: data.name, email: data.email, phone: data.phone, role: data.role, status: 'pending' })
+            const newUser = { name: data.name, email: data.email, phone: data.phone, role: data.role, status: 'pending' } as const
+            await UsersApi.add(uid, newUser)
+            useUsersStore().users.push({ id: uid, ...newUser })
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Ошибка регистрации'
         } finally {

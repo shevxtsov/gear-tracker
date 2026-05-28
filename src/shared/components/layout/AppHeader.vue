@@ -180,7 +180,7 @@ const openTakeGearDrawer = (): void => {
 
 const handleRegisterSubmitted = (): void => {
     registerDrawerOpen.value = false
-    router.push({ name: 'dashboard' })
+    router.push({ name: 'pending-approval' })
 }
 
 const handleLogout = (): void => {
