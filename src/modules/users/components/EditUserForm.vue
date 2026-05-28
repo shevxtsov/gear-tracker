@@ -107,7 +107,8 @@ const handleSubmit = async (): Promise<void> => {
             name: form.value.name,
             email: form.value.email,
             phone: Utils.maskPhone(form.value.phone),
-            role: form.value.role
+            role: form.value.role,
+            status: props.user.status
         })
 
         emit('submitted')

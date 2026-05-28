@@ -41,6 +41,46 @@
             </NButton>
         </div>
 
+        <div class="users-page__status-filter">
+            <NButton
+                size="small"
+                :type="statusFilter === null ? 'primary' : 'default'"
+                @click="statusFilter = null"
+            >
+                Все
+            </NButton>
+            <NButton
+                size="small"
+                :type="statusFilter === 'pending' ? 'warning' : 'default'"
+                @click="statusFilter = 'pending'"
+            >
+                Ожидают
+                <NTag
+                    v-if="pendingCount > 0"
+                    size="tiny"
+                    type="warning"
+                    round
+                    style="margin-left: 6px;"
+                >
+                    {{ pendingCount }}
+                </NTag>
+            </NButton>
+            <NButton
+                size="small"
+                :type="statusFilter === 'approved' ? 'success' : 'default'"
+                @click="statusFilter = 'approved'"
+            >
+                Одобренные
+            </NButton>
+            <NButton
+                size="small"
+                :type="statusFilter === 'blocked' ? 'error' : 'default'"
+                @click="statusFilter = 'blocked'"
+            >
+                Заблокированные
+            </NButton>
+        </div>
+
         <NSpin v-if="usersStore.isLoading" class="users-page__spinner" />
 
         <NAlert
@@ -67,36 +107,47 @@
                                 <NTag size="small" :type="roleTagType(user.role)">
                                     {{ UsersService.getRoleLabel(user.role) }}
                                 </NTag>
+                                <NTag v-if="user.status !== 'approved'" size="small" :type="statusTagType(user.status)">
+                                    {{ UsersService.getStatusLabel(user.status) }}
+                                </NTag>
                             </div>
-                            <span class="user-card__phone">{{ user.email }}</span>
-                            <span class="user-card__phone">{{ user.phone }}</span>
+                            <span class="user-card__meta">{{ user.email }}</span>
+                            <span class="user-card__meta">{{ user.phone }}</span>
                         </div>
 
                         <div class="user-card__actions">
-                            <NButton
-                                quaternary
-                                circle
-                                size="small"
-                                @click="openEdit(user)"
+                            <NDropdown
+                                trigger="click"
+                                :options="menuOptions(user)"
+                                :disabled="usersStore.loadingIds.has(user.id)"
+                                @select="(key) => handleMenuSelect(key, user)"
                             >
-                                <template #icon>
-                                    <NIcon><CreateOutline /></NIcon>
-                                </template>
-                            </NButton>
-
-                            <NPopconfirm positive-text="Подтвердить" negative-text="Отмена" @positive-click="usersStore.deleteUser(user.id)">
-                                <template #trigger>
-                                    <NButton quaternary circle size="small">
-                                        <template #icon>
-                                            <NIcon color="#e88080"><TrashOutline /></NIcon>
-                                        </template>
-                                    </NButton>
-                                </template>
-                                Удалить «{{ user.name }}»?
-                            </NPopconfirm>
+                                <NButton
+                                    quaternary
+                                    circle
+                                    size="small"
+                                    :loading="usersStore.loadingIds.has(user.id)"
+                                    :disabled="usersStore.loadingIds.has(user.id)"
+                                >
+                                    <template #icon>
+                                        <NIcon><EllipsisVertical /></NIcon>
+                                    </template>
+                                </NButton>
+                            </NDropdown>
                         </div>
                     </div>
                 </NCard>
+
+                <NModal
+                    v-model:show="deleteConfirmOpen"
+                    preset="dialog"
+                    type="error"
+                    title="Удалить пользователя?"
+                    :content="deletingUser ? `«${deletingUser.name}» будет удалён безвозвратно` : ''"
+                    positive-text="Удалить"
+                    negative-text="Отмена"
+                    @positive-click="confirmDelete"
+                />
             </div>
 
             <p v-else class="users-page__empty">Ничего не найдено</p>
@@ -121,34 +172,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
 import {
     NSpin, NAlert, NCard, NAvatar, NButton, NIcon,
-    NInput, NDrawer, NDrawerContent, NPopconfirm, NTag
+    NInput, NDrawer, NDrawerContent, NDropdown, NModal, NTag
 } from 'naive-ui'
-import { AddOutline, SearchOutline, SwapVerticalOutline, CreateOutline, TrashOutline, ArrowBackOutline } from '@vicons/ionicons5'
+import type { DropdownOption } from 'naive-ui'
+import {
+    AddOutline, SearchOutline, SwapVerticalOutline, ArrowBackOutline,
+    EllipsisVertical, CreateOutline, TrashOutline, CheckmarkCircleOutline, BanOutline
+} from '@vicons/ionicons5'
 import { useUsersStore } from '@/modules/users/stores/users.store'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
 import { UsersService } from '@/modules/users/services/users.service'
 import AddUserForm from '@/modules/users/components/AddUserForm.vue'
 import EditUserForm from '@/modules/users/components/EditUserForm.vue'
-import type { User, UserRole } from '@/modules/users/types/users.types'
+import type { User, UserRole, UserStatus } from '@/modules/users/types/users.types'
 
 const router = useRouter()
 const usersStore = useUsersStore()
+const { hasAdminAccess } = useCurrentUser()
 
 const drawerOpen = ref<boolean>(false)
 const editDrawerOpen = ref<boolean>(false)
 const editingUser = ref<User | null>(null)
+const deletingUser = ref<User | null>(null)
+const deleteConfirmOpen = ref<boolean>(false)
 const searchQuery = ref<string>('')
 const isSorted = ref<boolean>(false)
+const statusFilter = ref<UserStatus | null>(null)
+
+const pendingCount = computed(() => usersStore.users.filter((u) => u.status === 'pending').length)
 
 const visibleUsers = computed<User[]>(() => {
     let result = usersStore.users
 
+    if (statusFilter.value) {
+        result = result.filter((u) => u.status === statusFilter.value)
+    }
+
     if (searchQuery.value.trim()) {
         const query = searchQuery.value.trim().toLowerCase()
-
         result = result.filter((u) => u.name.toLowerCase().includes(query))
     }
 
@@ -167,9 +232,71 @@ const roleTagType = (role: UserRole) => {
     return 'default'
 }
 
-const openEdit = (user: User): void => {
-    editingUser.value = user
-    editDrawerOpen.value = true
+const statusTagType = (status: UserStatus) => {
+    if (status === 'pending') return 'warning'
+    if (status === 'blocked') return 'error'
+    return 'success'
+}
+
+const menuOptions = (user: User): DropdownOption[] => {
+    const options: DropdownOption[] = []
+
+    if (hasAdminAccess.value) {
+        if (user.status !== 'approved') {
+            options.push({
+                label: 'Одобрить',
+                key: 'approve',
+                icon: () => h(NIcon, { color: '#63e2b7' }, { default: () => h(CheckmarkCircleOutline) })
+            })
+        }
+        if (user.status !== 'blocked') {
+            options.push({
+                label: 'Заблокировать',
+                key: 'block',
+                icon: () => h(NIcon, { color: '#e88080' }, { default: () => h(BanOutline) })
+            })
+        }
+        if (options.length > 0) {
+            options.push({ type: 'divider', key: 'divider-status' })
+        }
+    }
+
+    options.push({
+        label: 'Редактировать',
+        key: 'edit',
+        icon: () => h(NIcon, null, { default: () => h(CreateOutline) })
+    })
+
+    options.push({ type: 'divider', key: 'divider-delete' })
+
+    options.push({
+        label: 'Удалить',
+        key: 'delete',
+        icon: () => h(NIcon, { color: '#e88080' }, { default: () => h(TrashOutline) })
+    })
+
+    return options
+}
+
+const handleMenuSelect = (key: string, user: User): void => {
+    if (key === 'approve') {
+        usersStore.updateStatus(user.id, 'approved')
+    } else if (key === 'block') {
+        usersStore.updateStatus(user.id, 'blocked')
+    } else if (key === 'edit') {
+        editingUser.value = user
+        editDrawerOpen.value = true
+    } else if (key === 'delete') {
+        deletingUser.value = user
+        deleteConfirmOpen.value = true
+    }
+}
+
+const confirmDelete = async (): Promise<void> => {
+    if (deletingUser.value) {
+        await usersStore.deleteUser(deletingUser.value.id)
+        deletingUser.value = null
+    }
 }
 
 onMounted(async () => {
@@ -200,7 +327,14 @@ onMounted(async () => {
     &__toolbar {
         display: flex;
         gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    &__status-filter {
+        display: flex;
+        gap: 6px;
         margin-bottom: 16px;
+        flex-wrap: wrap;
     }
 
     &__spinner {
@@ -239,6 +373,7 @@ onMounted(async () => {
         display: flex;
         align-items: center;
         gap: 6px;
+        flex-wrap: wrap;
     }
 
     &__name {
@@ -249,15 +384,12 @@ onMounted(async () => {
         white-space: nowrap;
     }
 
-    &__phone {
+    &__meta {
         font-size: 12px;
         opacity: 0.5;
     }
 
     &__actions {
-        display: flex;
-        align-items: center;
-        gap: 4px;
         flex-shrink: 0;
     }
 }

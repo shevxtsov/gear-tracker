@@ -41,8 +41,8 @@
                     <button
                         v-if="hasAdminAccess"
                         class="nav-menu__item"
-                        :class="{ 'nav-menu__item--active': isActive('gear') }"
-                        @click="navigate('gear')"
+                        :class="{ 'nav-menu__item--active': isActive('gears') }"
+                        @click="navigate('gears')"
                     >
                         Оборудование
                     </button>

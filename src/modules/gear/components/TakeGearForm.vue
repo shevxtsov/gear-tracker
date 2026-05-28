@@ -14,17 +14,25 @@
                 :options="availableGearOptions"
                 placeholder=""
                 filterable
+                :disabled="!!props.initialGearId"
             />
         </NFormItem>
 
         <NFormItem label="Куда берется" path="takenTo">
-            <NSelect
-                v-model:value="form.takenTo"
-                :options="locationOptions"
-                :loading="locationsStore.isLoading"
-                placeholder=""
-                filterable
-            />
+            <div class="field-row">
+                <NSelect
+                    v-model:value="form.takenTo"
+                    :options="locationOptions"
+                    :loading="locationsStore.isLoading"
+                    placeholder=""
+                    filterable
+                />
+                <NButton quaternary circle @click="showLocationModal = true">
+                    <template #icon>
+                        <NIcon><AddOutline /></NIcon>
+                    </template>
+                </NButton>
+            </div>
         </NFormItem>
 
         <NFormItem label="Дата и время" path="takenAt">
@@ -54,17 +62,26 @@
             Взять
         </NButton>
     </NForm>
+
+    <AddOptionModal
+        v-model:show="showLocationModal"
+        title="Новое место"
+        @confirm="onConfirmLocation"
+    />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { NForm, NFormItem, NSelect, NButton, NDatePicker } from 'naive-ui'
+import { NForm, NFormItem, NSelect, NButton, NDatePicker, NIcon } from 'naive-ui'
 import type { FormInst, FormRules, SelectOption } from 'naive-ui'
+import { AddOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
 import { useLocationsStore } from '@/modules/locations/stores/locations.store'
 import { useUsersStore } from '@/modules/users/stores/users.store'
 import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
+import AddOptionModal from '@/shared/components/AddOptionModal.vue'
 
+const props = defineProps<{ initialGearId?: string }>()
 const emit = defineEmits<{ submitted: [] }>()
 
 const gearStore = useGearStore()
@@ -74,9 +91,10 @@ const { currentUser, hasAdminAccess } = useCurrentUser()
 
 const formRef = ref<FormInst | null>(null)
 const isSubmitting = ref<boolean>(false)
+const showLocationModal = ref<boolean>(false)
 
 const form = ref({
-    gearId: null as string | null,
+    gearId: props.initialGearId ?? null as string | null,
     takenTo: null as string | null,
     takenAt: Date.now() as number | null,
     takenBy: currentUser.value?.name ?? null as string | null
@@ -110,6 +128,11 @@ const rules: FormRules = {
     takenTo: [{ required: true, message: 'Укажите место', trigger: 'change' }],
     takenAt: [{ required: true, type: 'number', message: 'Укажите дату и время', trigger: 'change' }],
     takenBy: [{ required: true, message: 'Укажите кто берет', trigger: 'change' }]
+}
+
+const onConfirmLocation = async (value: string): Promise<void> => {
+    await locationsStore.add(value)
+    form.value.takenTo = value
 }
 
 const handleSubmit = async (): Promise<void> => {
@@ -148,6 +171,17 @@ const handleSubmit = async (): Promise<void> => {
 
     &__datepicker {
         width: 100%;
+    }
+}
+
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+
+    .n-select {
+        flex: 1;
     }
 }
 </style>

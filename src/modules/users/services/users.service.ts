@@ -1,4 +1,4 @@
-import type { UserRole } from '@/modules/users/types/users.types'
+import type { UserRole, UserStatus } from '@/modules/users/types/users.types'
 
 export const ROLE_OPTIONS = [
     { label: 'Пользователь', value: 'user' as UserRole },
@@ -9,6 +9,12 @@ const ROLE_LABELS: Record<UserRole, string> = {
     user: 'Пользователь',
     moderator: 'Модератор',
     admin: 'Администратор'
+}
+
+const STATUS_LABELS: Record<UserStatus, string> = {
+    pending: 'Ожидает',
+    approved: 'Одобрен',
+    blocked: 'Заблокирован'
 }
 
 export class UsersService {
@@ -23,5 +29,9 @@ export class UsersService {
 
     static getRoleLabel = (role: UserRole): string => {
         return ROLE_LABELS[role] ?? role
+    }
+
+    static getStatusLabel = (status: UserStatus): string => {
+        return STATUS_LABELS[status] ?? status
     }
 }

@@ -1,5 +1,9 @@
 <template>
-    <div v-if="item" class="gear-detail">
+    <div v-if="isLoading" class="gear-detail__loading">
+        <NSpin />
+    </div>
+
+    <div v-else-if="item" class="gear-detail">
         <div class="gear-detail__header">
             <NButton quaternary circle @click="router.back()">
                 <template #icon>
@@ -25,6 +29,26 @@
                 </NTag>
             </div>
         </NCard>
+
+        <NButton
+            v-if="item.available && authStore.isAuthenticated"
+            type="primary"
+            block
+            class="gear-detail__action-btn"
+            @click="takeDrawerOpen = true"
+        >
+            Взять оборудование
+        </NButton>
+
+        <NButton
+            v-if="isMyGear"
+            type="warning"
+            block
+            class="gear-detail__action-btn"
+            @click="returnDrawerOpen = true"
+        >
+            Вернуть оборудование
+        </NButton>
 
         <h2 class="gear-detail__section-title">История использования</h2>
 
@@ -65,19 +89,45 @@
     <div v-else class="gear-detail__not-found">
         Оборудование не найдено
     </div>
+
+    <NDrawer v-model:show="takeDrawerOpen" placement="bottom" :height="520">
+        <NDrawerContent title="Взять оборудование" :native-scrollbar="false">
+            <TakeGearForm :initial-gear-id="item?.id" @submitted="takeDrawerOpen = false" />
+        </NDrawerContent>
+    </NDrawer>
+
+    <NDrawer v-model:show="returnDrawerOpen" placement="bottom" :height="300">
+        <NDrawerContent title="Вернуть оборудование" :native-scrollbar="false">
+            <ReturnGearForm v-if="item" :gear-id="item.id" @submitted="returnDrawerOpen = false" />
+        </NDrawerContent>
+    </NDrawer>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NButton, NIcon, NCard, NTag } from 'naive-ui'
+import { NButton, NIcon, NCard, NTag, NSpin, NDrawer, NDrawerContent } from 'naive-ui'
 import { ArrowBackOutline } from '@vicons/ionicons5'
 import { useGearStore } from '@/modules/gear/stores/gear.store'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
+import { useCurrentUser } from '@/modules/auth/composables/use-current-user'
+import TakeGearForm from '@/modules/gear/components/TakeGearForm.vue'
+import ReturnGearForm from '@/modules/my-gear/components/ReturnGearForm.vue'
 import type { GearUsageRecord } from '@/modules/gear/types/gear.types'
 
 const router = useRouter()
 const route = useRoute()
 const gearStore = useGearStore()
+const authStore = useAuthStore()
+
+const { currentUser } = useCurrentUser()
+
+const takeDrawerOpen = ref<boolean>(false)
+const returnDrawerOpen = ref<boolean>(false)
+const isLoading = computed(() => !authStore.isReady || gearStore.isLoading)
+const isMyGear = computed(() =>
+    !!item.value && !item.value.available && item.value.takenBy === currentUser.value?.name
+)
 
 const item = computed(() =>
     gearStore.items.find((i) => i.id === route.params.id)
@@ -95,10 +145,21 @@ const formatDate = (ts: number): string =>
         hour: '2-digit',
         minute: '2-digit'
     }).format(new Date(ts))
+
+onMounted(async () => {
+    await gearStore.fetchAll()
+})
 </script>
 
 <style lang="scss" scoped>
 .gear-detail {
+    &__loading {
+        display: flex;
+        justify-content: center;
+        padding: 32px 0;
+    }
+
+
     &__header {
         display: flex;
         align-items: center;
@@ -129,6 +190,14 @@ const formatDate = (ts: number): string =>
     &__label {
         opacity: 0.5;
         font-size: 13px;
+    }
+
+    &__action-btn {
+        margin-bottom: 8px;
+
+        &:last-of-type {
+            margin-bottom: 24px;
+        }
     }
 
     &__section-title {

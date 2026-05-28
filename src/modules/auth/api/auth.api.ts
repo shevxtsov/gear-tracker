@@ -31,9 +31,10 @@ export class AuthApi {
         }
     }
 
-    static register = async (email: string, password: string): Promise<void> => {
+    static register = async (email: string, password: string): Promise<string> => {
         try {
-            await createUserWithEmailAndPassword(firebaseAuth, email, password)
+            const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
+            return credential.user.uid
         } catch (e: any) {
             const message = FIREBASE_ERROR_MESSAGES[e?.code] ?? 'Ошибка регистрации'
             throw new Error(message)
@@ -54,12 +55,13 @@ export class AuthApi {
         }
     }
 
-    static createUserAccount = async (email: string, password: string): Promise<void> => {
+    static createUserAccount = async (email: string, password: string): Promise<string> => {
         const secondaryApp = initializeApp(firebaseConfig, `create-user-${Date.now()}`)
         const secondaryAuth = getAuth(secondaryApp)
         try {
-            await createUserWithEmailAndPassword(secondaryAuth, email, password)
+            const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password)
             await signOut(secondaryAuth)
+            return credential.user.uid
         } catch (e: any) {
             const message = FIREBASE_ERROR_MESSAGES[e?.code] ?? 'Ошибка создания аккаунта'
             throw new Error(message)

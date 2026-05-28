@@ -1,13 +1,13 @@
 import {
     collection,
     getDocsFromServer,
-    addDoc,
+    setDoc,
     doc,
     updateDoc,
     deleteDoc
 } from 'firebase/firestore'
 import { firebaseDb } from '@/shared/firebase'
-import type { User } from '@/modules/users/types/users.types'
+import type { User, UserStatus } from '@/modules/users/types/users.types'
 
 const COLLECTION = 'users'
 
@@ -22,12 +22,12 @@ const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> =>
 export class UsersApi {
     static getAll = async (): Promise<User[]> => {
         const snapshot = await withTimeout(getDocsFromServer(collection(firebaseDb, COLLECTION)))
-        return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as User))
+        return snapshot.docs.map((d) => ({ status: 'approved', ...d.data(), id: d.id } as User))
     }
 
-    static add = async (data: Omit<User, 'id'>): Promise<User> => {
-        const ref = await addDoc(collection(firebaseDb, COLLECTION), data)
-        return { id: ref.id, ...data }
+    static add = async (id: string, data: Omit<User, 'id'>): Promise<User> => {
+        await setDoc(doc(firebaseDb, COLLECTION, id), data)
+        return { id, ...data }
     }
 
     static update = async (id: string, data: Omit<User, 'id'>): Promise<void> => {
@@ -36,5 +36,9 @@ export class UsersApi {
 
     static delete = async (id: string): Promise<void> => {
         await deleteDoc(doc(firebaseDb, COLLECTION, id))
+    }
+
+    static updateStatus = async (id: string, status: UserStatus): Promise<void> => {
+        await updateDoc(doc(firebaseDb, COLLECTION, id), { status })
     }
 }
