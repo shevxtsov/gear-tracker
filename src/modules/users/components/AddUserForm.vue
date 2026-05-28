@@ -106,9 +106,9 @@ const handleSubmit = async (): Promise<void> => {
         isSubmitting.value = true
         authError.value = null
 
-        await AuthApi.createUserAccount(form.value.email, DEFAULT_PASSWORD)
+        const uid = await AuthApi.createUserAccount(form.value.email, DEFAULT_PASSWORD)
 
-        await usersStore.addUser({
+        await usersStore.addUser(uid, {
             name: form.value.name,
             email: form.value.email,
             phone: Utils.maskPhone(form.value.phone),

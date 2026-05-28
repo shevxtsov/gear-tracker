@@ -1,7 +1,7 @@
 import {
     collection,
     getDocsFromServer,
-    addDoc,
+    setDoc,
     doc,
     updateDoc,
     deleteDoc
@@ -25,9 +25,9 @@ export class UsersApi {
         return snapshot.docs.map((d) => ({ status: 'approved', ...d.data(), id: d.id } as User))
     }
 
-    static add = async (data: Omit<User, 'id'>): Promise<User> => {
-        const ref = await addDoc(collection(firebaseDb, COLLECTION), data)
-        return { id: ref.id, ...data }
+    static add = async (id: string, data: Omit<User, 'id'>): Promise<User> => {
+        await setDoc(doc(firebaseDb, COLLECTION, id), data)
+        return { id, ...data }
     }
 
     static update = async (id: string, data: Omit<User, 'id'>): Promise<void> => {

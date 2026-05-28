@@ -40,8 +40,8 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = null
 
         try {
-            await AuthApi.register(data.email, data.password)
-            await UsersApi.add({ name: data.name, email: data.email, phone: data.phone, role: data.role, status: 'pending' })
+            const uid = await AuthApi.register(data.email, data.password)
+            await UsersApi.add(uid, { name: data.name, email: data.email, phone: data.phone, role: data.role, status: 'pending' })
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'Ошибка регистрации'
         } finally {

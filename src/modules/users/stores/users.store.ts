@@ -22,8 +22,8 @@ export const useUsersStore = defineStore('users', () => {
         }
     }
 
-    const addUser = async (data: Omit<User, 'id'>): Promise<void> => {
-        const user = await UsersApi.add(data)
+    const addUser = async (id: string, data: Omit<User, 'id'>): Promise<void> => {
+        const user = await UsersApi.add(id, data)
         users.value.push(user)
     }
 
