@@ -120,7 +120,7 @@
 
     <NDrawer v-model:show="registerDrawerOpen" placement="bottom" :height="560">
         <NDrawerContent title="Регистрация" :native-scrollbar="false">
-            <RegisterForm @back="openLoginDrawer" @submitted="registerDrawerOpen = false" />
+            <RegisterForm @back="openLoginDrawer" @submitted="handleRegisterSubmitted" />
         </NDrawerContent>
     </NDrawer>
 </template>
@@ -176,6 +176,11 @@ const openRegisterDrawer = (): void => {
 const openTakeGearDrawer = (): void => {
     menuOpen.value = false
     takeGearDrawerOpen.value = true
+}
+
+const handleRegisterSubmitted = (): void => {
+    registerDrawerOpen.value = false
+    router.push({ name: 'dashboard' })
 }
 
 const handleLogout = (): void => {
